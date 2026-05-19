@@ -1,0 +1,1787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GRID Observatory — Live agent-based view of SEND governance</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --panel: #11162a;
+    --panel-edge: #1d2542;
+    --ink: #d8e2f0;
+    --ink-strong: #ffffff;
+    --muted: #7a8aa8;
+    --line: #4a9eff;
+    --baseline: #6c7a89;
+    --naive: #c0392b;
+    --grid: #2c7a7b;
+    --grid-glow: #2ce8a4;
+    --anxiety: #f4c75c;
+    --defensive: #e67e22;
+    --acting-out: #e74c3c;
+    --trigger: #ff8c42;
+    --annotation-bg: #fffbf5;
+    --annotation-border: #f0e6d2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Consolas, Monaco, monospace; font-variant-numeric: tabular-nums; }
+
+  .observatory {
+    display: grid;
+    grid-template-columns: 240px 1fr 240px;
+    grid-template-rows: auto 1fr auto;
+    gap: 14px;
+    padding: 14px;
+    min-height: 100vh;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  .observatory.cinema {
+    grid-template-columns: 1fr;
+  }
+  .observatory.cinema .side-panel,
+  .observatory.cinema .header-bar { display: none; }
+
+  .header-bar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 10px;
+  }
+  .title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--ink-strong);
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .header-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .action-btn {
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    color: var(--ink);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .action-btn:hover {
+    border-color: var(--line);
+    background: var(--panel-edge);
+  }
+
+  .side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 6px;
+    padding: 12px;
+  }
+  .panel-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  .var-row {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 8px;
+  }
+  .var-row:last-child { margin-bottom: 0; }
+  .var-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--ink);
+    margin-bottom: 3px;
+  }
+  .var-value { color: var(--muted); }
+  .var-bar {
+    height: 4px;
+    background: var(--panel-edge);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .var-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--line), var(--grid-glow));
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  .stage-row {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-bottom: 3px;
+    transition: all 0.3s;
+    border-left: 3px solid transparent;
+  }
+  .stage-row:last-child { margin-bottom: 0; }
+  .stage-row.active {
+    background: var(--panel-edge);
+    border-left-color: currentColor;
+    color: var(--ink-strong);
+    font-weight: 500;
+  }
+  .stage-row[data-stage="regulated"] { color: var(--grid-glow); }
+  .stage-row[data-stage="anxiety"] { color: var(--anxiety); }
+  .stage-row[data-stage="defensive"] { color: var(--defensive); }
+  .stage-row[data-stage="acting_out"] { color: var(--acting-out); }
+  .stage-row:not(.active) { color: var(--muted); }
+  .stage-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    margin-right: 8px;
+    opacity: 0.4;
+  }
+  .stage-row.active .stage-dot {
+    opacity: 1;
+    box-shadow: 0 0 8px currentColor;
+  }
+
+  .condition-btn {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    color: var(--ink);
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    margin-bottom: 4px;
+    text-align: left;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+  }
+  .condition-btn:last-child { margin-bottom: 0; }
+  .condition-btn:hover {
+    border-color: var(--line);
+  }
+  .condition-btn .cond-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+  }
+  .condition-btn[data-cond="baseline"] .cond-dot { background: var(--baseline); }
+  .condition-btn[data-cond="naive_ai"] .cond-dot { background: var(--naive); }
+  .condition-btn[data-cond="grid"] .cond-dot { background: var(--grid); }
+  .condition-btn.active {
+    background: var(--panel-edge);
+    color: var(--ink-strong);
+    font-weight: 500;
+  }
+  .condition-btn[data-cond="grid"].active { border-color: var(--grid); box-shadow: 0 0 12px rgba(44, 232, 164, 0.15); }
+  .condition-btn[data-cond="baseline"].active { border-color: var(--baseline); }
+  .condition-btn[data-cond="naive_ai"].active { border-color: var(--naive); box-shadow: 0 0 12px rgba(192, 57, 43, 0.15); }
+
+  .scene-wrap {
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+    min-height: 460px;
+  }
+  .observatory.cinema .scene-wrap {
+    min-height: calc(100vh - 200px);
+  }
+  #sceneCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  .scene-overlay {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .day-strip {
+    display: flex;
+    gap: 2px;
+    background: rgba(10, 14, 26, 0.7);
+    backdrop-filter: blur(8px);
+    padding: 6px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--panel-edge);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .day-strip .day {
+    padding: 2px 10px;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+  .day-strip .day.active {
+    background: var(--panel-edge);
+    color: var(--ink-strong);
+  }
+  .day-strip .day.past {
+    color: var(--ink);
+  }
+  .tick-readout {
+    background: rgba(10, 14, 26, 0.7);
+    backdrop-filter: blur(8px);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--panel-edge);
+    font-size: 11px;
+    color: var(--ink);
+    align-self: flex-start;
+  }
+
+  .annotation-card {
+    position: absolute;
+    bottom: 60px;
+    right: 12px;
+    transform: translateY(20px);
+    max-width: 360px;
+    width: calc(100% - 32px);
+    background: rgba(10, 14, 26, 0.55);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(74, 158, 255, 0.25);
+    border-left: 2px solid var(--grid-glow);
+    border-radius: 4px;
+    padding: 12px 14px;
+    color: var(--ink);
+    opacity: 0;
+    transition: opacity 0.5s, transform 0.5s;
+    pointer-events: none;
+    z-index: 20;
+  }
+  .annotation-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .annotation-timestamp {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--grid-glow);
+    font-weight: 600;
+    margin-bottom: 3px;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .annotation-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-strong);
+    margin-bottom: 4px;
+  }
+  .annotation-body {
+    font-size: 12px;
+    color: var(--ink);
+    line-height: 1.55;
+    opacity: 0.92;
+  }
+
+  .controls-bar {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    background: rgba(10, 14, 26, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--panel-edge);
+    border-radius: 6px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 15;
+  }
+  .ctrl-btn {
+    background: transparent;
+    border: 1px solid var(--panel-edge);
+    color: var(--ink);
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    transition: all 0.15s;
+    padding: 0;
+  }
+  .ctrl-btn:hover { border-color: var(--line); background: var(--panel-edge); }
+  .ctrl-btn svg { width: 14px; height: 14px; fill: currentColor; }
+  .scrub-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .scrub-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: var(--panel-edge);
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  .scrub-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: var(--grid-glow);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(44, 232, 164, 0.5);
+  }
+  .scrub-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: var(--grid-glow);
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+  }
+  .speed-select {
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    color: var(--ink);
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .record-feed {
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 11px;
+  }
+  .record-feed::-webkit-scrollbar { width: 4px; }
+  .record-feed::-webkit-scrollbar-track { background: transparent; }
+  .record-feed::-webkit-scrollbar-thumb { background: var(--panel-edge); border-radius: 2px; }
+  .record-entry {
+    padding: 5px 0;
+    border-bottom: 1px solid var(--panel-edge);
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    animation: slideIn 0.3s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .record-time { color: var(--muted); }
+  .record-stage {
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 9px;
+    text-transform: uppercase;
+  }
+  .record-stage.regulated { background: rgba(44, 232, 164, 0.15); color: var(--grid-glow); }
+  .record-stage.anxiety { background: rgba(244, 199, 92, 0.15); color: var(--anxiety); }
+  .record-stage.defensive { background: rgba(230, 126, 34, 0.15); color: var(--defensive); }
+  .record-stage.acting_out { background: rgba(231, 76, 60, 0.15); color: var(--acting-out); }
+  .record-stage.unclassified { background: var(--panel-edge); color: var(--muted); }
+
+  .health-score {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--grid-glow);
+    text-align: center;
+    font-family: "JetBrains Mono", monospace;
+    line-height: 1;
+    transition: color 0.5s;
+  }
+  .health-score.amber { color: var(--anxiety); }
+  .health-score.red { color: var(--acting-out); }
+  .health-meta {
+    text-align: center;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+    margin-bottom: 10px;
+  }
+  .health-component {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .health-bar {
+    height: 3px;
+    background: var(--panel-edge);
+    border-radius: 1px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  .health-bar-fill {
+    height: 100%;
+    background: var(--grid-glow);
+    transition: width 0.5s;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 14, 26, 0.85);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal-content {
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 560px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    color: var(--ink);
+  }
+  .modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ink-strong);
+    margin-bottom: 14px;
+  }
+  .modal-body { font-size: 13px; line-height: 1.65; }
+  .modal-body p { margin-bottom: 10px; }
+  .modal-body strong { color: var(--ink-strong); }
+  .modal-close {
+    background: var(--panel-edge);
+    border: none;
+    color: var(--ink);
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 14px;
+    font-family: inherit;
+  }
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--panel-edge);
+    font-size: 12px;
+  }
+  .legend-row:last-child { border-bottom: none; }
+  .legend-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 1100px) {
+    .observatory { grid-template-columns: 200px 1fr 200px; }
+  }
+  @media (max-width: 900px) {
+    .observatory {
+      grid-template-columns: 1fr;
+    }
+    .side-panel { flex-direction: row; flex-wrap: wrap; }
+    .side-panel .panel { flex: 1 1 200px; }
+    .scene-wrap { min-height: 380px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="observatory" id="observatory">
+
+  <div class="header-bar">
+    <div>
+      <div class="title">GRID Observatory</div>
+      <div class="subtitle">Agent-based view of safeguarding governance in a non-verbal SEND classroom</div>
+    </div>
+    <div class="header-actions">
+      <button class="action-btn" id="btnWhat">What is GRID?</button>
+      <button class="action-btn" id="btnLegend">What am I seeing?</button>
+      <button class="action-btn" id="btnShare">Share view</button>
+    </div>
+  </div>
+
+  <div class="side-panel" id="leftPanel">
+    <div class="panel">
+      <div class="panel-label">Operational Variables</div>
+      <div class="var-row">
+        <div class="var-label"><span>Staff workload</span><span class="var-value mono" id="v-workload">0.75</span></div>
+        <div class="var-bar"><div class="var-fill" id="bar-workload" style="width: 75%"></div></div>
+      </div>
+      <div class="var-row">
+        <div class="var-label"><span>CPI coverage</span><span class="var-value mono" id="v-cpi">0.50</span></div>
+        <div class="var-bar"><div class="var-fill" id="bar-cpi" style="width: 50%"></div></div>
+      </div>
+      <div class="var-row">
+        <div class="var-label"><span>Protected doc time</span><span class="var-value mono" id="v-doc">0.25</span></div>
+        <div class="var-bar"><div class="var-fill" id="bar-doc" style="width: 25%"></div></div>
+      </div>
+      <div class="var-row">
+        <div class="var-label"><span>Environmental risk</span><span class="var-value mono" id="v-env">0.45</span></div>
+        <div class="var-bar"><div class="var-fill" id="bar-env" style="width: 45%"></div></div>
+      </div>
+      <div class="var-row">
+        <div class="var-label"><span>Recording rate <span style="color: var(--muted); font-size: 9px;">(emergent)</span></span><span class="var-value mono" id="v-rec">0.00</span></div>
+        <div class="var-bar"><div class="var-fill" id="bar-rec" style="width: 0%"></div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Crisis Development Model</div>
+      <div class="stage-row active" data-stage="regulated"><span class="stage-dot"></span>Regulated</div>
+      <div class="stage-row" data-stage="anxiety"><span class="stage-dot"></span>Anxiety</div>
+      <div class="stage-row" data-stage="defensive"><span class="stage-dot"></span>Defensive</div>
+      <div class="stage-row" data-stage="acting_out"><span class="stage-dot"></span>Acting Out</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Governance Condition</div>
+      <button class="condition-btn" data-cond="baseline"><span class="cond-dot"></span>Standard Baseline</button>
+      <button class="condition-btn active" data-cond="grid"><span class="cond-dot"></span>GRID Framework</button>
+      <button class="condition-btn" data-cond="naive_ai"><span class="cond-dot"></span>Naive AI</button>
+    </div>
+  </div>
+
+  <div class="scene-wrap" id="sceneWrap">
+    <canvas id="sceneCanvas"></canvas>
+    <div class="scene-overlay">
+      <div class="day-strip" id="dayStrip">
+        <span class="day" data-day="0">Mon</span>
+        <span class="day" data-day="1">Tue</span>
+        <span class="day" data-day="2">Wed</span>
+        <span class="day" data-day="3">Thu</span>
+        <span class="day" data-day="4">Fri</span>
+      </div>
+      <div class="tick-readout mono" id="tickReadout">Mon 09:00 · tick 0 / 360</div>
+    </div>
+    <div class="annotation-card" id="annotationCard">
+      <div class="annotation-timestamp mono" id="annTime"></div>
+      <div class="annotation-header" id="annHeader"></div>
+      <div class="annotation-body" id="annBody"></div>
+    </div>
+    <div class="controls-bar">
+      <button class="ctrl-btn" id="btnRestart" title="Restart">
+        <svg viewBox="0 0 24 24"><path d="M12 5V2L7 7l5 5V8c3.3 0 6 2.7 6 6s-2.7 6-6 6-6-2.7-6-6H4c0 4.4 3.6 8 8 8s8-3.6 8-8-3.6-8-8-8z"/></svg>
+      </button>
+      <button class="ctrl-btn" id="btnPlay" title="Play/Pause">
+        <svg viewBox="0 0 24 24" id="playIcon"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+      </button>
+      <div class="scrub-wrap">
+        <input type="range" class="scrub-slider" id="scrubSlider" min="0" max="360" value="0">
+      </div>
+      <select class="speed-select" id="speedSelect">
+        <option value="0.5">0.5x</option>
+        <option value="1" selected>1x</option>
+        <option value="2">2x</option>
+        <option value="4">4x</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="side-panel" id="rightPanel">
+    <div class="panel">
+      <div class="panel-label">Governance Health</div>
+      <div class="health-score" id="healthScore">100</div>
+      <div class="health-meta">composite score · 0 to 100</div>
+      <div class="health-component"><span>Documentation</span><span class="mono" id="hc-doc">0</span></div>
+      <div class="health-bar"><div class="health-bar-fill" id="hb-doc" style="width: 0%"></div></div>
+      <div class="health-component"><span>Classification</span><span class="mono" id="hc-class">0</span></div>
+      <div class="health-bar"><div class="health-bar-fill" id="hb-class" style="width: 0%"></div></div>
+      <div class="health-component"><span>Crisis avoidance</span><span class="mono" id="hc-crisis">30</span></div>
+      <div class="health-bar"><div class="health-bar-fill" id="hb-crisis" style="width: 100%"></div></div>
+    </div>
+
+    <div class="panel" style="flex: 1;">
+      <div class="panel-label">Institutional Record</div>
+      <div class="record-feed" id="recordFeed">
+        <div style="color: var(--muted); font-size: 11px; padding: 8px 0;">No entries yet.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="modalWhat">
+  <div class="modal-content">
+    <div class="modal-title">What is GRID?</div>
+    <div class="modal-body">
+      <p><strong>GRID</strong> (Governance Risk and Infrastructure Diagnostics for SEND-AI Environments) is a computational governance framework for non-verbal Special Educational Needs and Disabilities settings.</p>
+      <p>It addresses a structural gap. Non-verbal autistic learners cannot self-report safeguarding concerns. Their behaviour is the only disclosure mechanism available. But behaviour that staff observe and recognise as a pre-crisis signal frequently does not reach the institutional record, because narrative documentation under high workload selects for crisis-level incidents and filters out the ambiguous and the sub-threshold.</p>
+      <p>GRID provides a structured CPI-aligned input interface that captures observational signals in real time, aggregates them into visible patterns across staff and days, and routes flags to the Designated Safeguarding Lead before a full incident occurs.</p>
+      <p>The Observatory you are watching replays a real classroom case study under three governance conditions: Standard Baseline (no AI support), Naive Threat Detection (pattern-flag AI), and the GRID Framework. Same week, same student, same staff. Three different system architectures. Three different outcomes.</p>
+    </div>
+    <button class="modal-close" data-close="modalWhat">Close</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalLegend">
+  <div class="modal-content">
+    <div class="modal-title">What am I seeing?</div>
+    <div class="modal-body">
+      <div class="legend-row"><div class="legend-swatch" style="background: radial-gradient(circle, #2ce8a4 30%, transparent 70%);"></div><div><strong>Green halo</strong> · Regulated stage. The student is calm.</div></div>
+      <div class="legend-row"><div class="legend-swatch" style="background: radial-gradient(circle, #f4c75c 30%, transparent 70%);"></div><div><strong>Amber halo</strong> · Anxiety stage. Early sub-crisis signal.</div></div>
+      <div class="legend-row"><div class="legend-swatch" style="background: radial-gradient(circle, #e67e22 30%, transparent 70%);"></div><div><strong>Orange halo</strong> · Defensive stage. Escalation in progress.</div></div>
+      <div class="legend-row"><div class="legend-swatch" style="background: radial-gradient(circle, #e74c3c 30%, transparent 70%);"></div><div><strong>Red halo</strong> · Acting Out. Crisis-level behaviour requiring intervention.</div></div>
+      <div class="legend-row"><div class="legend-swatch" style="background: #ffffff;"></div><div><strong>White dots</strong> · Staff members. Teal centre marks CPI-trained.</div></div>
+      <div class="legend-row"><div class="legend-swatch" style="background: rgba(74, 158, 255, 0.6);"></div><div><strong>Cyan light beam</strong> · An observation event. A staff member is noticing a student.</div></div>
+      <div class="legend-row"><div class="legend-swatch" style="background: #2c7a7b;"></div><div><strong>Teal mark to side panel</strong> · A CPI-classified observation entering the institutional record.</div></div>
+      <div class="legend-row"><div class="legend-swatch" style="background: #ff8c42;"></div><div><strong>Orange pulse from edge</strong> · The external trigger event (Thursday afternoon).</div></div>
+      <div class="legend-row"><div class="legend-swatch" style="background: radial-gradient(circle, #2ce8a4 30%, transparent 70%); border: 1px solid #2c7a7b;"></div><div><strong>Teal ripple across room</strong> · DSL intervention activated under GRID. Low-arousal protocol is now operational.</div></div>
+    </div>
+    <button class="modal-close" data-close="modalLegend">Close</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// GRID OBSERVATORY — v1.0
+// Agent-based animated visualisation of the GRID framework
+// ============================================================
+
+// ----- Annotation script (locked) -----
+const ANNOTATIONS = {
+  baseline: [
+    { tick: 0, time: 'MON 09:00', header: 'Week begins', body: 'Standard governance conditions. Six staff on shift, three CPI-trained. Workload high. Protected documentation time limited to ten minutes at end of day. The focal student arrives regulated.' },
+    { tick: 28, time: 'MON 11:20', header: 'Sub-crisis signal', body: 'The focal student runs at a member of staff, bounces against them, screams and laughs. Two staff observe. The behaviour reads as play. No formal record is created. Cognitive load is too high to draft a narrative report for an ambiguous observation.' },
+    { tick: 66, time: 'MON 15:30', header: 'End of day', body: 'Three behavioural incidents have been logged across the school. None concern the focal student. Documentation completed under fatigue. The day closes with no antecedent record for tomorrow\'s review.' },
+    { tick: 93, time: 'TUE 10:45', header: 'Pattern repeats, invisibly', body: 'The same play-presenting behaviour appears again. A different staff member observes it. A brief conversation in the corridor with a colleague. The conversation does not become a record. Two days of sub-crisis signal now exist in staff memory only.' },
+    { tick: 144, time: 'WED 08:30', header: 'Student absent', body: 'The focal student is not in school today. No observation possible. The institutional record carries forward only what was formally documented, which is nothing.' },
+    { tick: 216, time: 'THU 09:00', header: 'Parent contact', body: 'The school receives a call from the parent. The student attacked her at home the previous evening. The information is logged in the safeguarding system but is treated as an off-site incident. No connection is drawn to in-school behaviour because no in-school pattern exists in the record.' },
+    { tick: 251, time: 'THU 14:55', header: 'Trigger arrives', body: 'An external precipitant lands. The focal student\'s stress state rises sharply. Staff have no antecedent record to consult and no protocol active.' },
+    { tick: 253, time: 'THU 15:05', header: 'Crisis', body: 'Directed aggression. Hair pulling, biting, kicking, screaming. Physical intervention required under the CPI Safety Intervention protocol. Multiple staff sustain injuries. To everyone above classroom level, the incident appears to have happened without warning.' },
+    { tick: 311, time: 'FRI 11:00', header: 'Aftermath', body: 'The incident report is filed. The Designated Safeguarding Lead reviews an event with no documented antecedent. The Behaviour Lead reaches the same conclusion. The system has captured what happened. It had no mechanism to capture what was building.' },
+  ],
+  naive_ai: [
+    { tick: 0, time: 'MON 09:00', header: 'Week begins', body: 'Same staffing, same workload. A Naive Threat Detection AI is active, monitoring the institutional record for accumulating sub-crisis signals against any individual student.' },
+    { tick: 28, time: 'MON 11:20', header: 'Sub-crisis signal', body: 'The focal student presents the play-bouncing behaviour. One CPI-trained staff member documents it as Anxiety-stage. The AI registers the entry. Threshold not yet reached.' },
+    { tick: 93, time: 'TUE 10:45', header: 'Threshold approached', body: 'The behaviour reappears. A second Anxiety-stage entry is logged. The AI\'s rolling window now contains two signals against the focal student.' },
+    { tick: 112, time: 'TUE 13:10', header: 'Threat alert broadcast', body: 'A third Anxiety-stage observation pushes the focal student over the AI\'s threshold. A threat alert is broadcast to all staff. Vigilance protocols engage. Staff defensive stance rises across the room.' },
+    { tick: 128, time: 'TUE 14:30', header: 'Environmental tension', body: 'The focal student, acutely sensitive to environmental cues, reads the raised staff posture as a signal of unsafety. Stress begins to rise from a regulated baseline. The AI\'s alert has changed the environment the student is in.' },
+    { tick: 161, time: 'WED 10:15', header: 'Self-fulfilling pattern', body: 'Staff vigilance has not relaxed. The focal student\'s stress remains elevated. New Defensive-stage signals enter the record, which the AI reads as confirmation of its earlier prediction. The feedback loop is closing.' },
+    { tick: 216, time: 'THU 09:00', header: 'Parent contact', body: 'The school receives the parent call regarding the off-site incident. The AI flags the case at maximum priority. Staff posture intensifies further.' },
+    { tick: 251, time: 'THU 14:55', header: 'Trigger lands on elevated stress', body: 'The external precipitant arrives. The focal student is already in the Defensive zone. The shock compounds with the existing elevation. Crisis is reached within minutes.' },
+    { tick: 258, time: 'THU 15:30', header: 'The system has not detected risk, it has created it', body: 'The AI\'s original prediction is recorded as accurate. The closed feedback loop reinforces itself. Algorithmic bias reinforcement, expressed quantitatively. The tool functioned as designed. The student was the variable the system did not protect.' },
+  ],
+  grid: [
+    { tick: 0, time: 'MON 09:00', header: 'Week begins', body: 'Same staffing, same workload. GRID is active. Staff have access to a structured CPI-aligned input interface. Observations require recognition rather than narrative description.' },
+    { tick: 28, time: 'MON 11:20', header: 'Signal captured in under a minute', body: 'The focal student presents the play-bouncing behaviour. A CPI-trained staff member selects Anxiety-stage from the structured menu. Timestamped, attributed, in the record before the next session begins.' },
+    { tick: 66, time: 'MON 15:30', header: 'Day one closes with antecedent record', body: 'Three sub-crisis observations against the focal student now exist in the institutional record. None met the threshold for traditional incident reporting. All are visible to the Designated Safeguarding Lead.' },
+    { tick: 93, time: 'TUE 10:45', header: 'Pattern emerging', body: 'A different staff member observes the same behaviour and logs it. The pattern crosses staff, across sessions, across days. The record holds what individual memory would have lost.' },
+    { tick: 132, time: 'TUE 16:00', header: 'DSL pattern review', body: 'Four classified signals against the focal student within a rolling thirty-six tick window. DSL pattern threshold reached. Review initiated.' },
+    { tick: 144, time: 'WED 08:30', header: 'Student absent, intervention prepared', body: 'The focal student is not in school. DSL uses the day to liaise with parents, review the Education Health and Care Plan, brief staff on low-arousal protocol for the student\'s return. The absence does not pause the governance work.' },
+    { tick: 216, time: 'THU 09:00', header: 'Parent contact, prepared response', body: 'The school receives the parent call. The information is already in context. Low-arousal protocol is active. Environmental adjustments are in place. Staff posture remains calm.' },
+    { tick: 251, time: 'THU 14:55', header: 'Trigger arrives, impact dampened', body: 'The external precipitant lands. Protective measures are operational. The focal student\'s stress response is significant but contained. The system absorbs the shock instead of amplifying it.' },
+    { tick: 276, time: 'THU 17:00', header: 'Tension Reduction stage observed', body: 'The student returns to regulated state through the late afternoon. Tension Reduction stage logged. The day closes without physical intervention.' },
+    { tick: 311, time: 'FRI 11:00', header: 'Governance audit', body: 'The week\'s record is complete and reviewable. Antecedent signals captured. Intervention timing documented. Trigger response logged. The system can be evaluated against its own evidence. This is what auditable AI governance in a SEND environment looks like.' },
+  ],
+};
+
+// ----- Simulation parameters -----
+const PARAMS = {
+  n_staff: 6,
+  n_students: 8,
+  cpi_coverage: 0.5,
+  workload: 0.75,
+  protected_doc_time: 0.25,
+  env_risk: 0.45,
+  ticks_per_day: 72,
+  n_days: 5,
+  total_ticks: 360,
+  naive_ai_window: 24,
+  naive_ai_threshold: 3,
+  grid_window: 36,
+  grid_threshold: 3,
+  external_trigger_tick: 252,
+  external_trigger_magnitude: 0.55,
+  dsl_intervention_min_signals: 4,
+};
+
+// ----- Seeded RNG -----
+function mulberry32(seed) {
+  return function() {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function gaussian(rand, mu, sigma) {
+  const u = 1 - rand();
+  const v = rand();
+  return mu + sigma * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+function stageFromStress(s) {
+  if (s < 0.30) return 'regulated';
+  if (s < 0.55) return 'anxiety';
+  if (s < 0.78) return 'defensive';
+  return 'acting_out';
+}
+
+// ----- Pre-compute the full timeline for one condition -----
+function simulateTimeline(condition) {
+  const rand = mulberry32(condition === 'baseline' ? 1001 : condition === 'naive_ai' ? 2002 : 3003);
+
+  const focal = {
+    sensitivity: 0.70,
+    stress: 0.18,
+  };
+  const staff = [];
+  const nTrained = Math.round(PARAMS.cpi_coverage * PARAMS.n_staff);
+  for (let i = 0; i < PARAMS.n_staff; i++) {
+    staff.push({
+      id: i,
+      cpi_trained: i < nTrained,
+      cognitive_load: Math.max(0, Math.min(1, PARAMS.workload + gaussian(rand, 0, 0.08))),
+      defensive_stance: 0.10,
+    });
+  }
+
+  const record = [];
+  const frames = [];
+  let dslActive = false;
+  let dslActivationTick = -1;
+  let naiveAlertActive = false;
+  let naiveAlertTick = -1;
+
+  function recentSignals(currentTick, window) {
+    const cutoff = currentTick - window;
+    let count = 0;
+    for (let i = record.length - 1; i >= 0; i--) {
+      const e = record[i];
+      if (e.tick < cutoff) break;
+      if (e.classified && (e.stage === 'anxiety' || e.stage === 'defensive')) count++;
+    }
+    return count;
+  }
+
+  for (let t = 0; t < PARAMS.total_ticks; t++) {
+    const day = Math.floor(t / PARAMS.ticks_per_day);
+    const tickInDay = t % PARAMS.ticks_per_day;
+
+    if (tickInDay === 0 && t > 0) {
+      focal.stress *= 0.75;
+    }
+
+    const envEvent = rand() < (PARAMS.env_risk * 0.03);
+    const externalTrigger = (t === PARAMS.external_trigger_tick);
+
+    // DSL review under GRID
+    if (condition === 'grid' && !dslActive) {
+      const antecedent = recentSignals(t, t || 1);
+      if (antecedent >= PARAMS.dsl_intervention_min_signals) {
+        dslActive = true;
+        dslActivationTick = t;
+      }
+    }
+
+    // Naive AI alert
+    if (condition === 'naive_ai' && !naiveAlertActive) {
+      const signals = recentSignals(t, PARAMS.naive_ai_window);
+      if (signals >= PARAMS.naive_ai_threshold) {
+        naiveAlertActive = true;
+        naiveAlertTick = t;
+      }
+    }
+
+    // Update staff posture
+    const baseStance = 0.08 + 0.12 * (staff.reduce((a, s) => a + s.cognitive_load, 0) / staff.length);
+    let meanStance;
+    if (condition === 'baseline') {
+      staff.forEach(s => s.defensive_stance = baseStance);
+      meanStance = baseStance;
+    } else if (condition === 'naive_ai') {
+      const stance = naiveAlertActive ? 0.85 : baseStance;
+      staff.forEach(s => s.defensive_stance = stance);
+      meanStance = stance;
+    } else {
+      const stance = dslActive ? 0.04 : baseStance;
+      staff.forEach(s => s.defensive_stance = stance);
+      meanStance = stance;
+    }
+
+    // Stress update
+    const decay = 0.93;
+    const postureEffect = meanStance * focal.sensitivity * 0.18;
+    const envEffect = envEvent ? 0.20 : 0.0;
+    const noise = gaussian(rand, 0, 0.015);
+    focal.stress = Math.max(0, Math.min(1, decay * focal.stress + postureEffect + envEffect + noise));
+
+    if (externalTrigger) {
+      const mitigation = dslActive ? 0.65 : 0.0;
+      const shock = PARAMS.external_trigger_magnitude * (1.0 - mitigation);
+      focal.stress = Math.min(1, focal.stress + shock);
+    }
+
+    // Observation and documentation events
+    const events = [];
+    for (const s of staff) {
+      const pObserve = 0.45 * (1.0 - 0.55 * s.cognitive_load);
+      if (rand() > pObserve) continue;
+
+      let pDocument;
+      if (condition === 'grid') {
+        pDocument = 0.30 + 0.65 * PARAMS.protected_doc_time;
+      } else {
+        pDocument = (0.10 + 0.55 * PARAMS.protected_doc_time) * (1.0 - 0.6 * s.cognitive_load);
+      }
+      if (!s.cpi_trained) pDocument *= 0.7;
+
+      const stage = stageFromStress(focal.stress);
+      const documented = rand() < pDocument;
+
+      events.push({
+        staff_id: s.id,
+        cpi_trained: s.cpi_trained,
+        documented,
+        stage,
+        classified: documented && s.cpi_trained,
+      });
+
+      if (documented) {
+        record.push({
+          tick: t,
+          staff_id: s.id,
+          stage,
+          classified: s.cpi_trained,
+        });
+      }
+    }
+
+    // Governance health calculation
+    const nDocTotal = record.length;
+    const nClassified = record.filter(e => e.classified).length;
+    const nCrisisTicks = frames.filter(f => f.stage === 'acting_out').length;
+    const crisisNow = focal.stress >= 0.78 ? 1 : 0;
+    const docComponent = Math.min(40, nDocTotal / 5.0);
+    const classComponent = nDocTotal > 0 ? (nClassified / nDocTotal) * 30 : 0;
+    const crisisComponent = nCrisisTicks === 0 ? 30 : Math.max(0, 30 - nCrisisTicks * 2.5);
+    const health = docComponent + classComponent + crisisComponent;
+
+    frames.push({
+      tick: t,
+      day,
+      tickInDay,
+      stress: focal.stress,
+      stage: stageFromStress(focal.stress),
+      meanStance,
+      staffStates: staff.map(s => ({ id: s.id, defensive_stance: s.defensive_stance, cognitive_load: s.cognitive_load, cpi_trained: s.cpi_trained })),
+      events,
+      dslActive,
+      dslActivationTick,
+      naiveAlertActive,
+      naiveAlertTick,
+      externalTrigger,
+      recordLength: record.length,
+      nClassified,
+      health,
+      docComponent,
+      classComponent,
+      crisisComponent,
+    });
+  }
+
+  return { frames, record };
+}
+
+// Pre-compute all three timelines
+const TIMELINES = {
+  baseline: simulateTimeline('baseline'),
+  naive_ai: simulateTimeline('naive_ai'),
+  grid: simulateTimeline('grid'),
+};
+
+// ----- Scene state -----
+const state = {
+  condition: 'grid',
+  tick: 0,
+  playing: true,
+  speed: 1.0,
+  lastFrameTime: 0,
+  tickAccumulator: 0,
+  cinema: false,
+  recordRendered: 0,
+  activeAnnotationIdx: -1,
+  annotationVisibleUntil: 0,
+  studentPositions: null,
+  staffPositions: null,
+  scenePulses: [],
+};
+
+// Initialise stable agent positions tied to the classroom structure
+function initAgentPositions() {
+  const rand = mulberry32(42);
+  state.studentPositions = [];
+
+  // Focal student (index 0) sits on the carpet
+  state.studentPositions.push({
+    x: 0.30, y: 0.62,
+    vx: (rand() - 0.5) * 0.0004,
+    vy: (rand() - 0.5) * 0.0004,
+    zone: 'carpet',
+  });
+  // Three more students on the carpet
+  for (let i = 0; i < 3; i++) {
+    state.studentPositions.push({
+      x: 0.24 + rand() * 0.20, y: 0.50 + rand() * 0.25,
+      vx: (rand() - 0.5) * 0.0004,
+      vy: (rand() - 0.5) * 0.0004,
+      zone: 'carpet',
+    });
+  }
+  // Four students at workstations
+  const workstationX = [0.22, 0.34, 0.46, 0.58];
+  for (let i = 0; i < 4; i++) {
+    state.studentPositions.push({
+      x: workstationX[i] + (rand() - 0.5) * 0.02,
+      y: 0.20 + (rand() - 0.5) * 0.02,
+      vx: (rand() - 0.5) * 0.0002,
+      vy: (rand() - 0.5) * 0.0002,
+      zone: 'workstation',
+    });
+  }
+
+  // Staff distributed around the room
+  state.staffPositions = [
+    { x: 0.30, y: 0.45, vx: (rand() - 0.5) * 0.0006, vy: (rand() - 0.5) * 0.0006 }, // near carpet
+    { x: 0.42, y: 0.30, vx: (rand() - 0.5) * 0.0006, vy: (rand() - 0.5) * 0.0006 }, // between zones
+    { x: 0.55, y: 0.40, vx: (rand() - 0.5) * 0.0006, vy: (rand() - 0.5) * 0.0006 }, // mid-room
+    { x: 0.75, y: 0.24, vx: (rand() - 0.5) * 0.0004, vy: (rand() - 0.5) * 0.0004 }, // teacher station
+    { x: 0.68, y: 0.55, vx: (rand() - 0.5) * 0.0006, vy: (rand() - 0.5) * 0.0006 }, // sensory corner
+    { x: 0.24, y: 0.38, vx: (rand() - 0.5) * 0.0006, vy: (rand() - 0.5) * 0.0006 }, // near door
+  ];
+
+  // DSL inside the office partition
+  state.dslPosition = { x: 0.98, y: 0.51 };
+}
+
+initAgentPositions();
+
+// ----- Canvas drawing -----
+const canvas = document.getElementById('sceneCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const wrap = document.getElementById('sceneWrap');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function isoProject(x, y, W, H) {
+  // Convert normalised (0-1) coords to isometric screen position
+  // Scale tuned to fit exterior landscape (x as low as -0.10) and DSL office (x up to 1.05)
+  const cx = W * 0.48;
+  const cy = H * 0.48;
+  const scaleX = W * 0.52;
+  const scaleY = H * 0.46;
+  const lx = (x - 0.5) * scaleX;
+  const ly = (y - 0.5) * scaleY;
+  // Isometric transform: rotate 30deg + compress y
+  const sx = cx + (lx - ly) * 0.85;
+  const sy = cy + (lx + ly) * 0.40;
+  return { x: sx, y: sy };
+}
+
+function drawRoom(W, H) {
+  // ============================================================
+  // EXTERIOR LANDSCAPE — visible to the left of the building
+  // ============================================================
+  ctx.strokeStyle = 'rgba(74, 158, 255, 0.18)';
+  ctx.lineWidth = 0.8;
+
+  // Ground line outside the building (left side)
+  const gA = isoProject(-0.10, 0.05, W, H);
+  const gB = isoProject(0.10, 0.05, W, H);
+  const gC = isoProject(-0.10, 0.95, W, H);
+  const gD = isoProject(0.10, 0.95, W, H);
+  ctx.beginPath();
+  ctx.moveTo(gA.x, gA.y);
+  ctx.lineTo(gB.x, gB.y);
+  ctx.moveTo(gC.x, gC.y);
+  ctx.lineTo(gD.x, gD.y);
+  ctx.stroke();
+
+  // Trees outside (line drawings)
+  const trees = [
+    { x: -0.04, y: 0.18 },
+    { x: -0.07, y: 0.40 },
+    { x: -0.03, y: 0.62 },
+    { x: -0.06, y: 0.82 },
+  ];
+  for (const t of trees) {
+    const tp = isoProject(t.x, t.y, W, H);
+    // Trunk
+    ctx.strokeStyle = 'rgba(74, 158, 255, 0.22)';
+    ctx.beginPath();
+    ctx.moveTo(tp.x, tp.y);
+    ctx.lineTo(tp.x, tp.y - 14);
+    ctx.stroke();
+    // Foliage as triangle
+    ctx.beginPath();
+    ctx.moveTo(tp.x, tp.y - 36);
+    ctx.lineTo(tp.x - 11, tp.y - 14);
+    ctx.lineTo(tp.x + 11, tp.y - 14);
+    ctx.closePath();
+    ctx.stroke();
+    // Inner detail line
+    ctx.strokeStyle = 'rgba(74, 158, 255, 0.10)';
+    ctx.beginPath();
+    ctx.moveTo(tp.x, tp.y - 30);
+    ctx.lineTo(tp.x - 7, tp.y - 18);
+    ctx.moveTo(tp.x, tp.y - 30);
+    ctx.lineTo(tp.x + 7, tp.y - 18);
+    ctx.stroke();
+  }
+
+  // Path leading to door
+  ctx.strokeStyle = 'rgba(74, 158, 255, 0.14)';
+  ctx.setLineDash([3, 4]);
+  const pA = isoProject(-0.02, 0.48, W, H);
+  const pB = isoProject(0.10, 0.50, W, H);
+  ctx.beginPath();
+  ctx.moveTo(pA.x, pA.y);
+  ctx.lineTo(pB.x, pB.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ============================================================
+  // BUILDING SHELL — primary classroom walls
+  // ============================================================
+  ctx.strokeStyle = 'rgba(74, 158, 255, 0.55)';
+  ctx.lineWidth = 1.4;
+  const corners = [
+    isoProject(0.10, 0.10, W, H),
+    isoProject(0.90, 0.10, W, H),
+    isoProject(0.90, 0.90, W, H),
+    isoProject(0.10, 0.90, W, H),
+  ];
+  ctx.beginPath();
+  ctx.moveTo(corners[0].x, corners[0].y);
+  for (let i = 1; i < corners.length; i++) ctx.lineTo(corners[i].x, corners[i].y);
+  ctx.closePath();
+  ctx.stroke();
+
+  // Door (small break on left wall + arc indicator)
+  const doorA = isoProject(0.10, 0.46, W, H);
+  const doorB = isoProject(0.10, 0.54, W, H);
+  // Overlay segment in background colour to "cut" the wall
+  ctx.strokeStyle = '#0a0e1a';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(doorA.x, doorA.y);
+  ctx.lineTo(doorB.x, doorB.y);
+  ctx.stroke();
+  // Door swing arc
+  ctx.strokeStyle = 'rgba(74, 158, 255, 0.30)';
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.arc(doorA.x + 8, (doorA.y + doorB.y) / 2, 14, -Math.PI * 0.20, Math.PI * 0.20);
+  ctx.stroke();
+  // Door leaf
+  ctx.beginPath();
+  ctx.moveTo(doorA.x, (doorA.y + doorB.y) / 2);
+  ctx.lineTo(doorA.x + 14, (doorA.y + doorB.y) / 2 - 2);
+  ctx.stroke();
+
+  // Inner floor grid (faint reference lines)
+  ctx.strokeStyle = 'rgba(74, 158, 255, 0.08)';
+  ctx.lineWidth = 0.5;
+  for (let i = 1; i < 8; i++) {
+    const t = i / 8;
+    const a = isoProject(0.10, 0.10 + t * 0.80, W, H);
+    const b = isoProject(0.90, 0.10 + t * 0.80, W, H);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    const c = isoProject(0.10 + t * 0.80, 0.10, W, H);
+    const d = isoProject(0.10 + t * 0.80, 0.90, W, H);
+    ctx.beginPath();
+    ctx.moveTo(c.x, c.y);
+    ctx.lineTo(d.x, d.y);
+    ctx.stroke();
+  }
+
+  // ============================================================
+  // INTERIOR FURNITURE — construction-line drawings
+  // ============================================================
+  function isoRect(x, y, w, h, opacity = 0.32, lw = 0.9) {
+    const a = isoProject(x, y, W, H);
+    const b = isoProject(x + w, y, W, H);
+    const c = isoProject(x + w, y + h, W, H);
+    const d = isoProject(x, y + h, W, H);
+    ctx.strokeStyle = `rgba(74, 158, 255, ${opacity})`;
+    ctx.lineWidth = lw;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.lineTo(c.x, c.y);
+    ctx.lineTo(d.x, d.y);
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  // Four individual workstations along the top wall
+  isoRect(0.18, 0.16, 0.08, 0.07);
+  isoRect(0.30, 0.16, 0.08, 0.07);
+  isoRect(0.42, 0.16, 0.08, 0.07);
+  isoRect(0.54, 0.16, 0.08, 0.07);
+
+  // Chair markers next to workstations (small triangles)
+  ctx.strokeStyle = 'rgba(74, 158, 255, 0.20)';
+  ctx.lineWidth = 0.6;
+  for (const x of [0.22, 0.34, 0.46, 0.58]) {
+    const ch = isoProject(x, 0.27, W, H);
+    ctx.beginPath();
+    ctx.arc(ch.x, ch.y, 4, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Teacher's station (larger, right side)
+  isoRect(0.72, 0.18, 0.13, 0.09, 0.38);
+  // Chair
+  const tch = isoProject(0.78, 0.31, W, H);
+  ctx.beginPath();
+  ctx.arc(tch.x, tch.y, 5, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Carpet area (large rectangle in lower-left, dashed border for "soft area")
+  ctx.strokeStyle = 'rgba(74, 158, 255, 0.28)';
+  ctx.setLineDash([4, 4]);
+  ctx.lineWidth = 1;
+  const carpetCorners = [
+    isoProject(0.18, 0.45, W, H),
+    isoProject(0.48, 0.45, W, H),
+    isoProject(0.48, 0.78, W, H),
+    isoProject(0.18, 0.78, W, H),
+  ];
+  ctx.beginPath();
+  ctx.moveTo(carpetCorners[0].x, carpetCorners[0].y);
+  for (let i = 1; i < carpetCorners.length; i++) ctx.lineTo(carpetCorners[i].x, carpetCorners[i].y);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Sensory corner (bottom-right): bean bag + sensory equipment outlines
+  // Bean bag as a soft rounded shape
+  ctx.strokeStyle = 'rgba(74, 158, 255, 0.36)';
+  ctx.lineWidth = 1;
+  const beanCenter = isoProject(0.75, 0.55, W, H);
+  ctx.beginPath();
+  ctx.ellipse(beanCenter.x, beanCenter.y, 22, 14, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  // Inner contour to suggest cushion
+  ctx.strokeStyle = 'rgba(74, 158, 255, 0.18)';
+  ctx.beginPath();
+  ctx.ellipse(beanCenter.x, beanCenter.y - 3, 15, 8, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // A second smaller sensory object (sensory tile or mat) below bean bag
+  isoRect(0.65, 0.66, 0.18, 0.10, 0.22);
+  // Crosshatch on sensory mat
+  ctx.strokeStyle = 'rgba(74, 158, 255, 0.12)';
+  ctx.lineWidth = 0.5;
+  for (let i = 1; i < 4; i++) {
+    const t = i / 4;
+    const a = isoProject(0.65 + t * 0.18, 0.66, W, H);
+    const b = isoProject(0.65 + t * 0.18, 0.76, W, H);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+
+  // Storage units along right wall
+  isoRect(0.82, 0.40, 0.06, 0.45, 0.28);
+  // Shelf dividers
+  ctx.strokeStyle = 'rgba(74, 158, 255, 0.16)';
+  ctx.lineWidth = 0.5;
+  for (let i = 1; i < 4; i++) {
+    const t = i / 4;
+    const a = isoProject(0.82, 0.40 + t * 0.45, W, H);
+    const b = isoProject(0.88, 0.40 + t * 0.45, W, H);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+
+  // Visual timetable strip along top wall
+  isoRect(0.20, 0.115, 0.45, 0.025, 0.22);
+
+  // DSL office partition (small room to the right, slightly outside main classroom)
+  ctx.strokeStyle = 'rgba(44, 232, 164, 0.30)';
+  ctx.lineWidth = 1;
+  const dslCorners = [
+    isoProject(0.92, 0.40, W, H),
+    isoProject(1.04, 0.40, W, H),
+    isoProject(1.04, 0.62, W, H),
+    isoProject(0.92, 0.62, W, H),
+  ];
+  ctx.beginPath();
+  ctx.moveTo(dslCorners[0].x, dslCorners[0].y);
+  for (let i = 1; i < dslCorners.length; i++) ctx.lineTo(dslCorners[i].x, dslCorners[i].y);
+  ctx.closePath();
+  ctx.stroke();
+  // DSL desk
+  isoRect(0.94, 0.45, 0.08, 0.06, 0.26);
+
+  // ============================================================
+  // LABELS WITH LEADER LINES
+  // ============================================================
+  function drawLabel(text, anchorX, anchorY, targetX, targetY, align = 'left') {
+    const anchor = isoProject(anchorX, anchorY, W, H);
+    const target = isoProject(targetX, targetY, W, H);
+    // Leader line
+    ctx.strokeStyle = 'rgba(74, 158, 255, 0.32)';
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.moveTo(anchor.x, anchor.y);
+    ctx.lineTo(target.x, target.y);
+    ctx.stroke();
+    // Small dot at target
+    ctx.fillStyle = 'rgba(74, 158, 255, 0.55)';
+    ctx.beginPath();
+    ctx.arc(target.x, target.y, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    // Label text
+    ctx.fillStyle = 'rgba(216, 226, 240, 0.70)';
+    ctx.font = '9px "JetBrains Mono", monospace';
+    ctx.textAlign = align;
+    const offset = align === 'right' ? -4 : 4;
+    ctx.fillText(text, anchor.x + offset, anchor.y + 3);
+  }
+
+  drawLabel('WORKSTATIONS', 0.18, 0.04, 0.38, 0.20);
+  drawLabel('VISUAL TIMETABLE', 0.50, 0.02, 0.42, 0.13);
+  drawLabel('TEACHER STATION', 0.85, 0.04, 0.78, 0.23);
+  drawLabel('CARPET AREA', 0.04, 0.50, 0.33, 0.62, 'right');
+  drawLabel('SENSORY CORNER · BEAN BAG', 0.72, 0.92, 0.75, 0.55, 'left');
+  drawLabel('SENSORY MAT', 0.86, 0.95, 0.74, 0.71, 'left');
+  drawLabel('STORAGE', 0.97, 0.30, 0.85, 0.55, 'left');
+  drawLabel('DSL OFFICE', 1.05, 0.32, 0.98, 0.48, 'left');
+  drawLabel('DOOR', 0.04, 0.42, 0.10, 0.50, 'right');
+
+  // Room identifier (top-left)
+  ctx.fillStyle = 'rgba(74, 158, 255, 0.50)';
+  ctx.font = 'bold 10px "JetBrains Mono", monospace';
+  ctx.textAlign = 'left';
+  const lbl = isoProject(0.12, 0.085, W, H);
+  ctx.fillText('CLASSROOM · ZONE A · KS3 SEND', lbl.x, lbl.y);
+
+  // Compass / orientation indicator (top-right)
+  ctx.fillStyle = 'rgba(74, 158, 255, 0.35)';
+  ctx.font = '8px "JetBrains Mono", monospace';
+  ctx.textAlign = 'right';
+  const cmp = isoProject(0.92, 0.085, W, H);
+  ctx.fillText('N ↑', cmp.x, cmp.y);
+}
+
+function stageColor(stage) {
+  switch(stage) {
+    case 'regulated': return '#2ce8a4';
+    case 'anxiety': return '#f4c75c';
+    case 'defensive': return '#e67e22';
+    case 'acting_out': return '#e74c3c';
+    default: return '#2ce8a4';
+  }
+}
+
+function drawHalo(ctx, x, y, radius, color, intensity = 1.0) {
+  const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
+  // Parse hex to rgba
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${0.55 * intensity})`);
+  grad.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${0.25 * intensity})`);
+  grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawAgents(frame, W, H) {
+  const focalStudent = state.studentPositions[0];
+  const focalStress = frame.stress;
+  const focalStage = frame.stage;
+
+  // Draw non-focal students with mild ambient stress
+  for (let i = 1; i < state.studentPositions.length; i++) {
+    const p = state.studentPositions[i];
+    const sp = isoProject(p.x, p.y, W, H);
+    drawHalo(ctx, sp.x, sp.y, 28, '#2ce8a4', 0.4);
+    ctx.fillStyle = '#7a8aa8';
+    ctx.beginPath();
+    ctx.arc(sp.x, sp.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Focal student with state-coloured halo
+  const fp = isoProject(focalStudent.x, focalStudent.y, W, H);
+  const haloColor = stageColor(focalStage);
+  const haloRadius = focalStage === 'acting_out' ? 56 : focalStage === 'defensive' ? 48 : 40;
+  const haloIntensity = focalStage === 'acting_out' ? 1.4 + Math.sin(state.tick * 0.5) * 0.3 : 1.1;
+  drawHalo(ctx, fp.x, fp.y, haloRadius, haloColor, haloIntensity);
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(fp.x, fp.y, 6, 0, Math.PI * 2);
+  ctx.fill();
+  // Focal indicator ring
+  ctx.strokeStyle = haloColor;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(fp.x, fp.y, 9, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Staff agents
+  for (let i = 0; i < state.staffPositions.length; i++) {
+    const p = state.staffPositions[i];
+    const sp = isoProject(p.x, p.y, W, H);
+    const ss = frame.staffStates[i];
+    const stance = ss.defensive_stance;
+
+    // Halo if defensive stance is elevated (Naive AI red, GRID calm blue)
+    if (stance > 0.5) {
+      drawHalo(ctx, sp.x, sp.y, 22, '#e74c3c', 0.7);
+    } else if (state.condition === 'grid' && frame.dslActive) {
+      drawHalo(ctx, sp.x, sp.y, 18, '#2ce8a4', 0.4);
+    }
+
+    // Staff dot (small square)
+    const dotColor = stance > 0.5 ? '#ffaaa0' : ss.cognitive_load > 0.7 ? '#f4c75c' : '#ffffff';
+    ctx.fillStyle = dotColor;
+    ctx.fillRect(sp.x - 4, sp.y - 4, 8, 8);
+
+    // CPI trained marker (teal centre)
+    if (ss.cpi_trained) {
+      ctx.fillStyle = '#2c7a7b';
+      ctx.fillRect(sp.x - 2, sp.y - 2, 4, 4);
+    }
+  }
+
+  // DSL agent
+  const dp = isoProject(state.dslPosition.x, state.dslPosition.y, W, H);
+  if (frame.dslActive) {
+    drawHalo(ctx, dp.x, dp.y, 32, '#2ce8a4', 1.2);
+  }
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(dp.x - 5, dp.y - 5, 10, 10);
+  ctx.strokeStyle = '#2c7a7b';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(dp.x - 5, dp.y - 5, 10, 10);
+  ctx.fillStyle = 'rgba(216, 226, 240, 0.7)';
+  ctx.font = '9px "JetBrains Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('DSL', dp.x, dp.y - 12);
+}
+
+function drawObservationEvents(frame, W, H) {
+  // Draw observation light beams between staff who observed this tick and the focal student
+  const fp = isoProject(state.studentPositions[0].x, state.studentPositions[0].y, W, H);
+  for (const evt of frame.events) {
+    const staffPos = state.staffPositions[evt.staff_id];
+    const sp = isoProject(staffPos.x, staffPos.y, W, H);
+    const alpha = 0.6;
+    ctx.strokeStyle = evt.classified ? `rgba(44, 232, 164, ${alpha})` : evt.documented ? `rgba(74, 158, 255, ${alpha * 0.7})` : `rgba(74, 158, 255, ${alpha * 0.3})`;
+    ctx.lineWidth = evt.classified ? 1.5 : 1.0;
+    ctx.beginPath();
+    ctx.moveTo(sp.x, sp.y);
+    ctx.lineTo(fp.x, fp.y);
+    ctx.stroke();
+
+    // Dot at student end
+    if (evt.documented) {
+      ctx.fillStyle = evt.classified ? '#2ce8a4' : '#4a9eff';
+      ctx.beginPath();
+      ctx.arc(fp.x, fp.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function drawDslPulse(frame, W, H) {
+  if (!frame.dslActive || frame.dslActivationTick < 0) return;
+  const ticksSinceActivation = frame.tick - frame.dslActivationTick;
+  if (ticksSinceActivation > 8) return;
+
+  const dp = isoProject(state.dslPosition.x, state.dslPosition.y, W, H);
+  const progress = ticksSinceActivation / 8;
+  const radius = 30 + progress * 280;
+  const alpha = (1 - progress) * 0.4;
+
+  ctx.strokeStyle = `rgba(44, 232, 164, ${alpha})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(dp.x, dp.y, radius, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawNaiveAlert(frame, W, H) {
+  if (!frame.naiveAlertActive || frame.naiveAlertTick < 0) return;
+  const ticksSinceAlert = frame.tick - frame.naiveAlertTick;
+  // Pulsing red wash across room while alert is active
+  const pulse = 0.04 + 0.03 * Math.sin(state.tick * 0.15);
+  ctx.fillStyle = `rgba(231, 76, 60, ${pulse})`;
+  ctx.fillRect(0, 0, W, H);
+
+  // Initial alert flash
+  if (ticksSinceAlert < 6) {
+    const flashAlpha = (1 - ticksSinceAlert / 6) * 0.25;
+    ctx.fillStyle = `rgba(231, 76, 60, ${flashAlpha})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+function drawExternalTrigger(frame, W, H) {
+  const ticksFromTrigger = frame.tick - PARAMS.external_trigger_tick;
+  if (ticksFromTrigger < -2 || ticksFromTrigger > 12) return;
+
+  if (ticksFromTrigger >= 0 && ticksFromTrigger <= 12) {
+    const progress = ticksFromTrigger / 12;
+    const alpha = (1 - progress) * 0.6;
+    // Vertical orange flash
+    const fp = isoProject(state.studentPositions[0].x, state.studentPositions[0].y, W, H);
+    const gradient = ctx.createLinearGradient(W, 0, fp.x, fp.y);
+    gradient.addColorStop(0, `rgba(255, 140, 66, ${alpha})`);
+    gradient.addColorStop(1, `rgba(255, 140, 66, 0)`);
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = 4 + (1 - progress) * 6;
+    ctx.beginPath();
+    ctx.moveTo(W, fp.y - 100);
+    ctx.lineTo(fp.x, fp.y);
+    ctx.stroke();
+
+    // Background wash
+    ctx.fillStyle = `rgba(255, 140, 66, ${alpha * 0.08})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+function drawScene() {
+  const rect = canvas.getBoundingClientRect();
+  const W = rect.width;
+  const H = rect.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const timeline = TIMELINES[state.condition].frames;
+  const frame = timeline[Math.min(Math.floor(state.tick), timeline.length - 1)];
+
+  // Draw background condition wash
+  drawNaiveAlert(frame, W, H);
+
+  // Draw room
+  drawRoom(W, H);
+
+  // Draw external trigger if firing
+  drawExternalTrigger(frame, W, H);
+
+  // Update agent micro-positions (drift, zone-constrained)
+  for (let i = 0; i < state.studentPositions.length; i++) {
+    const p = state.studentPositions[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.zone === 'carpet') {
+      if (p.x < 0.20 || p.x > 0.46) p.vx *= -1;
+      if (p.y < 0.47 || p.y > 0.76) p.vy *= -1;
+    } else if (p.zone === 'workstation') {
+      // Workstation students barely move (small radius around desk)
+      const baseX = [0.22, 0.34, 0.46, 0.58][i - 4] || 0.40;
+      if (Math.abs(p.x - baseX) > 0.025) p.vx *= -1;
+      if (Math.abs(p.y - 0.20) > 0.025) p.vy *= -1;
+    } else {
+      if (p.x < 0.15 || p.x > 0.85) p.vx *= -1;
+      if (p.y < 0.18 || p.y > 0.85) p.vy *= -1;
+    }
+  }
+  for (const p of state.staffPositions) {
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.x < 0.15 || p.x > 0.80) p.vx *= -1;
+    if (p.y < 0.20 || p.y > 0.80) p.vy *= -1;
+  }
+
+  // Draw agents and overlays
+  drawAgents(frame, W, H);
+  drawObservationEvents(frame, W, H);
+  drawDslPulse(frame, W, H);
+}
+
+// ----- UI updates -----
+function updateSidePanels(frame) {
+  // Variables panel
+  document.getElementById('v-workload').textContent = PARAMS.workload.toFixed(2);
+  document.getElementById('v-cpi').textContent = PARAMS.cpi_coverage.toFixed(2);
+  document.getElementById('v-doc').textContent = PARAMS.protected_doc_time.toFixed(2);
+  document.getElementById('v-env').textContent = PARAMS.env_risk.toFixed(2);
+  const recordingRate = state.tick > 0 ? Math.min(1, frame.recordLength / (state.tick * 0.6)) : 0;
+  document.getElementById('v-rec').textContent = recordingRate.toFixed(2);
+  document.getElementById('bar-rec').style.width = (recordingRate * 100) + '%';
+
+  // CPI stage panel
+  document.querySelectorAll('.stage-row').forEach(row => {
+    row.classList.toggle('active', row.dataset.stage === frame.stage);
+  });
+
+  // Day strip
+  document.querySelectorAll('.day-strip .day').forEach(d => {
+    const dn = parseInt(d.dataset.day);
+    d.classList.remove('active', 'past');
+    if (dn === frame.day) d.classList.add('active');
+    else if (dn < frame.day) d.classList.add('past');
+  });
+
+  // Tick readout
+  const hour = 9 + Math.floor(frame.tickInDay / 12);
+  const minute = (frame.tickInDay % 12) * 5;
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  document.getElementById('tickReadout').textContent =
+    `${dayNames[frame.day]} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} · tick ${state.tick} / ${PARAMS.total_ticks}`;
+
+  // Health panel
+  const healthEl = document.getElementById('healthScore');
+  healthEl.textContent = Math.round(frame.health);
+  healthEl.classList.remove('amber', 'red');
+  if (frame.health < 40) healthEl.classList.add('red');
+  else if (frame.health < 65) healthEl.classList.add('amber');
+
+  document.getElementById('hc-doc').textContent = Math.round(frame.docComponent) + '/40';
+  document.getElementById('hb-doc').style.width = (frame.docComponent / 40 * 100) + '%';
+  document.getElementById('hc-class').textContent = Math.round(frame.classComponent) + '/30';
+  document.getElementById('hb-class').style.width = (frame.classComponent / 30 * 100) + '%';
+  document.getElementById('hc-crisis').textContent = Math.round(frame.crisisComponent) + '/30';
+  document.getElementById('hb-crisis').style.width = (frame.crisisComponent / 30 * 100) + '%';
+
+  // Scrub slider
+  document.getElementById('scrubSlider').value = state.tick;
+}
+
+function renderRecordFeed() {
+  const feed = document.getElementById('recordFeed');
+  const record = TIMELINES[state.condition].record;
+  const visible = record.filter(e => e.tick <= state.tick);
+
+  if (state.recordRendered === visible.length && state.recordRendered > 0) return;
+
+  if (visible.length === 0) {
+    feed.innerHTML = '<div style="color: var(--muted); font-size: 11px; padding: 8px 0;">No entries yet.</div>';
+    state.recordRendered = 0;
+    return;
+  }
+
+  // Render most-recent-first, up to last 30
+  const slice = visible.slice(-30).reverse();
+  feed.innerHTML = slice.map(e => {
+    const hour = 9 + Math.floor((e.tick % PARAMS.ticks_per_day) / 12);
+    const minute = ((e.tick % PARAMS.ticks_per_day) % 12) * 5;
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+    const dayName = dayNames[Math.floor(e.tick / PARAMS.ticks_per_day)];
+    const stageClass = e.classified ? e.stage : 'unclassified';
+    const stageText = e.classified ? e.stage.replace('_', ' ') : 'concern';
+    return `<div class="record-entry">
+      <span class="record-time">${dayName} ${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}</span>
+      <span class="record-stage ${stageClass}">${stageText}</span>
+      <span style="color: var(--muted);">S${e.staff_id}</span>
+    </div>`;
+  }).join('');
+  state.recordRendered = visible.length;
+}
+
+function updateAnnotation() {
+  const annotations = ANNOTATIONS[state.condition];
+  let activeIdx = -1;
+  for (let i = annotations.length - 1; i >= 0; i--) {
+    if (state.tick >= annotations[i].tick && state.tick < annotations[i].tick + 50) {
+      activeIdx = i;
+      break;
+    }
+  }
+
+  const card = document.getElementById('annotationCard');
+  if (activeIdx !== state.activeAnnotationIdx) {
+    state.activeAnnotationIdx = activeIdx;
+    if (activeIdx >= 0) {
+      const ann = annotations[activeIdx];
+      document.getElementById('annTime').textContent = ann.time;
+      document.getElementById('annHeader').textContent = ann.header;
+      document.getElementById('annBody').textContent = ann.body;
+      card.classList.add('visible');
+    } else {
+      card.classList.remove('visible');
+    }
+  }
+}
+
+// ----- Animation loop -----
+function animate(timestamp) {
+  if (state.lastFrameTime === 0) state.lastFrameTime = timestamp;
+  const dt = timestamp - state.lastFrameTime;
+  state.lastFrameTime = timestamp;
+
+  if (state.playing) {
+    // Advance ticks: 10 ticks per second at 1x speed
+    state.tickAccumulator += (dt / 100) * state.speed;
+    while (state.tickAccumulator >= 1 && state.tick < PARAMS.total_ticks) {
+      state.tick++;
+      state.tickAccumulator -= 1;
+    }
+    if (state.tick >= PARAMS.total_ticks) {
+      state.tick = PARAMS.total_ticks;
+      state.playing = false;
+      updatePlayButton();
+    }
+  }
+
+  drawScene();
+  const frame = TIMELINES[state.condition].frames[Math.min(state.tick, PARAMS.total_ticks - 1)];
+  updateSidePanels(frame);
+  renderRecordFeed();
+  updateAnnotation();
+
+  requestAnimationFrame(animate);
+}
+
+requestAnimationFrame(animate);
+
+// ----- Controls -----
+function updatePlayButton() {
+  const icon = document.getElementById('playIcon');
+  if (state.playing) {
+    icon.innerHTML = '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>';
+  } else {
+    icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+  }
+}
+
+document.getElementById('btnPlay').addEventListener('click', () => {
+  if (state.tick >= PARAMS.total_ticks) {
+    state.tick = 0;
+    state.recordRendered = 0;
+    state.activeAnnotationIdx = -1;
+  }
+  state.playing = !state.playing;
+  updatePlayButton();
+});
+
+document.getElementById('btnRestart').addEventListener('click', () => {
+  state.tick = 0;
+  state.recordRendered = 0;
+  state.activeAnnotationIdx = -1;
+  state.playing = true;
+  updatePlayButton();
+});
+
+document.getElementById('scrubSlider').addEventListener('input', (e) => {
+  state.tick = parseInt(e.target.value);
+  state.recordRendered = 0;
+  state.activeAnnotationIdx = -1;
+});
+
+document.getElementById('speedSelect').addEventListener('change', (e) => {
+  state.speed = parseFloat(e.target.value);
+});
+
+document.querySelectorAll('.condition-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.condition-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.condition = btn.dataset.cond;
+    state.tick = 0;
+    state.recordRendered = 0;
+    state.activeAnnotationIdx = -1;
+    state.playing = true;
+    updatePlayButton();
+  });
+});
+
+document.getElementById('btnShare').addEventListener('click', () => {
+  state.cinema = !state.cinema;
+  document.getElementById('observatory').classList.toggle('cinema', state.cinema);
+  document.getElementById('btnShare').textContent = state.cinema ? 'Full view' : 'Share view';
+  setTimeout(resizeCanvas, 100);
+});
+
+document.getElementById('btnWhat').addEventListener('click', () => {
+  document.getElementById('modalWhat').classList.add('visible');
+});
+document.getElementById('btnLegend').addEventListener('click', () => {
+  document.getElementById('modalLegend').classList.add('visible');
+});
+document.querySelectorAll('[data-close]').forEach(b => {
+  b.addEventListener('click', () => {
+    document.getElementById(b.dataset.close).classList.remove('visible');
+  });
+});
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', (e) => {
+    if (e.target === m) m.classList.remove('visible');
+  });
+});
+
+updatePlayButton();
+</script>
+</body>
+</html>
