@@ -1,0 +1,1535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GRID Observatory · Interactive SEND governance simulation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #060912;
+  --bg-canvas: #0a0f1c;
+  --bg-panel: #0f1626;
+  --bg-elev: #16203a;
+  --bg-control: #1f2a48;
+  --border: rgba(255,255,255,0.07);
+  --border-strong: rgba(255,255,255,0.13);
+  --text-primary: #eef2fa;
+  --text-secondary: #a4adc4;
+  --text-dim: #6a7591;
+  --text-faint: #45506a;
+  --stage-regulated: #6ee7a3;
+  --stage-anxiety: #fbbf24;
+  --stage-defensive: #fb8c3b;
+  --stage-acting: #ef4444;
+  --teal: #2dd4bf;
+  --teal-soft: #14b8a6;
+  --teal-deep: #0e6b62;
+  --cyan: #67e8f9;
+  --skin: #d4a888;
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-body: 'Manrope', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', Menlo, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg-deep); color: var(--text-primary); font-family: var(--font-body); font-size: 13px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+body { min-height: 100vh; overflow: hidden; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input[type="range"] { -webkit-appearance: none; appearance: none; background: transparent; width: 100%; }
+
+.app { display: grid; grid-template-rows: auto 1fr; height: 100vh; max-height: 100vh; }
+
+/* HEADER */
+.header { display: grid; grid-template-columns: 1fr auto; align-items: center; padding: 10px 18px; border-bottom: 1px solid var(--border); background: var(--bg-panel); }
+.title-block h1 { font-family: var(--font-display); font-size: 21px; font-weight: 400; line-height: 1.1; color: var(--text-primary); letter-spacing: 0.3px; }
+.title-block h1 em { font-style: italic; color: var(--teal); }
+.title-block p { font-size: 11px; color: var(--text-dim); letter-spacing: 0.3px; margin-top: 2px; }
+.header-actions { display: flex; gap: 6px; }
+.header-actions button { font-size: 11px; font-weight: 500; padding: 6px 11px; border-radius: 5px; border: 1px solid var(--border-strong); color: var(--text-secondary); background: var(--bg-elev); transition: all 0.15s ease; }
+.header-actions button:hover { border-color: var(--teal); color: var(--teal); }
+.header-actions button.active { background: var(--teal-deep); border-color: var(--teal); color: var(--text-primary); }
+
+/* MAIN */
+.main { display: grid; grid-template-columns: 250px 1fr 280px; height: 100%; min-height: 0; }
+
+/* LEFT */
+.left { background: var(--bg-panel); border-right: 1px solid var(--border); overflow-y: auto; padding: 14px; }
+.section-block { margin-bottom: 18px; }
+.section-block:last-child { margin-bottom: 0; }
+.section-label { font-family: var(--font-mono); font-size: 9.5px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.slider-row { margin-bottom: 10px; }
+.slider-row:last-child { margin-bottom: 0; }
+.slider-label { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+.slider-label .name { font-size: 11px; color: var(--text-secondary); }
+.slider-label .value { font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--teal); }
+input[type="range"]::-webkit-slider-runnable-track { height: 3px; background: var(--bg-control); border-radius: 2px; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; background: var(--teal); border: 2px solid var(--bg-deep); border-radius: 50%; margin-top: -5px; cursor: grab; box-shadow: 0 0 6px rgba(45,212,191,0.5); }
+input[type="range"]::-moz-range-track { height: 3px; background: var(--bg-control); border-radius: 2px; }
+input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; background: var(--teal); border: 2px solid var(--bg-deep); border-radius: 50%; cursor: grab; }
+input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-faint); cursor: not-allowed; box-shadow: none; }
+.emergent-row { padding: 8px 10px; background: var(--bg-elev); border-radius: 5px; border: 1px solid var(--border); margin-top: 6px; }
+.emergent-row .slider-label .value { color: var(--text-primary); }
+.cdm-list { display: flex; flex-direction: column; gap: 5px; }
+.cdm-item { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-secondary); padding: 5px 8px; border-radius: 5px; transition: all 0.15s ease; }
+.cdm-item.active { background: var(--bg-elev); color: var(--text-primary); font-weight: 500; }
+.cdm-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }
+.cdm-dot.regulated { background: var(--stage-regulated); color: var(--stage-regulated); }
+.cdm-dot.anxiety   { background: var(--stage-anxiety);   color: var(--stage-anxiety); }
+.cdm-dot.defensive { background: var(--stage-defensive); color: var(--stage-defensive); }
+.cdm-dot.acting    { background: var(--stage-acting);    color: var(--stage-acting); }
+.cond-options { display: flex; flex-direction: column; gap: 4px; }
+.cond-option { padding: 8px 10px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; transition: all 0.15s ease; display: flex; align-items: center; gap: 8px; }
+.cond-option:hover { background: var(--bg-control); }
+.cond-option.active { background: rgba(45,212,191,0.08); border-color: var(--teal); }
+.cond-radio { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--text-faint); position: relative; flex-shrink: 0; }
+.cond-option.active .cond-radio { border-color: var(--teal); }
+.cond-option.active .cond-radio::after { content: ""; position: absolute; inset: 1.5px; background: var(--teal); border-radius: 50%; }
+.cond-option .lbl { font-size: 12px; color: var(--text-primary); font-weight: 500; line-height: 1.2; }
+.cond-option .sub { font-size: 10px; color: var(--text-dim); margin-top: 1px; }
+.trigger-btn { width: 100%; padding: 9px; background: rgba(251,140,59,0.1); border: 1px solid var(--stage-defensive); border-radius: 5px; color: var(--stage-defensive); font-size: 10.5px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; font-family: var(--font-mono); transition: all 0.15s ease; }
+.trigger-btn:hover:not(:disabled) { background: rgba(251,140,59,0.18); box-shadow: 0 0 10px rgba(251,140,59,0.25); }
+.trigger-btn:disabled { opacity: 0.4; cursor: not-allowed; border-color: var(--text-faint); color: var(--text-faint); }
+.trigger-select { width: 100%; padding: 8px 9px; margin-bottom: 8px; background: var(--bg-elev); border: 1px solid var(--border-strong); border-radius: 5px; color: var(--text-primary); font-size: 11px; font-family: var(--font-body); cursor: pointer; }
+.trigger-select:hover { border-color: var(--stage-defensive); }
+.trigger-select:focus { outline: none; border-color: var(--stage-defensive); }
+
+/* CENTRE */
+.centre { display: grid; grid-template-rows: auto 1fr auto; min-height: 0; background: var(--bg-canvas); }
+.topbar { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-bottom: 1px solid var(--border); background: var(--bg-panel); }
+.day-strip { display: flex; gap: 1px; background: var(--bg-elev); padding: 3px; border-radius: 999px; border: 1px solid var(--border); }
+.day-strip button { font-family: var(--font-mono); font-size: 10px; font-weight: 500; color: var(--text-dim); padding: 4px 10px; border-radius: 999px; transition: all 0.15s ease; letter-spacing: 0.5px; }
+.day-strip button:hover { color: var(--text-secondary); }
+.day-strip button.active { background: var(--teal-deep); color: var(--text-primary); }
+.day-strip button.passed { color: var(--text-secondary); }
+.day-strip button.crisis { background: rgba(239,68,68,0.2); color: var(--stage-acting); }
+.time-display { font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--text-primary); letter-spacing: 0.4px; }
+
+.view { position: relative; overflow: hidden; min-height: 0; }
+.view svg { width: 100%; height: 100%; display: block; }
+.viewport-compare { position: absolute; inset: 0; display: none; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--border); z-index: 5; }
+body.compare-mode .viewport-single { display: none; }
+body.compare-mode .viewport-compare { display: grid; }
+.compare-panel { background: var(--bg-canvas); display: flex; flex-direction: column; position: relative; min-width: 0; }
+.compare-head { padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--bg-panel); }
+.compare-head .name { font-family: var(--font-display); font-size: 14px; color: var(--text-primary); }
+.compare-head .desc { font-size: 9px; color: var(--text-dim); letter-spacing: 0.4px; text-transform: uppercase; margin-top: 1px; }
+.compare-svg-wrap { flex: 1; min-height: 0; }
+.compare-svg-wrap svg { width: 100%; height: 100%; }
+.compare-stats { padding: 6px 10px; border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.compare-stat .stat-num { font-family: var(--font-mono); font-size: 14px; font-weight: 600; color: var(--text-primary); line-height: 1; }
+.compare-stat .stat-label { font-size: 8.5px; color: var(--text-dim); letter-spacing: 0.4px; text-transform: uppercase; margin-top: 2px; }
+
+/* COMMENTARY (overlay) */
+.commentary-overlay { position: absolute; bottom: 14px; left: 14px; max-width: 360px; background: rgba(15,22,38,0.95); border: 1px solid var(--border-strong); border-left: 3px solid var(--teal); border-radius: 6px; padding: 10px 14px; backdrop-filter: blur(8px); box-shadow: 0 8px 20px rgba(0,0,0,0.4); z-index: 4; }
+.commentary-overlay .time { font-family: var(--font-mono); font-size: 10px; font-weight: 600; color: var(--teal); letter-spacing: 0.5px; margin-bottom: 4px; }
+.commentary-overlay .text { font-size: 12px; color: var(--text-secondary); line-height: 1.45; }
+.commentary-overlay .text .actor { color: var(--text-primary); font-weight: 600; }
+.commentary-overlay .text .stage-tag { color: var(--stage-anxiety); font-weight: 500; }
+.commentary-overlay .text .stage-tag.def { color: var(--stage-defensive); }
+.commentary-overlay .text .stage-tag.act { color: var(--stage-acting); }
+.commentary-overlay .text .grid-tag { color: var(--teal); font-weight: 500; }
+
+/* TRANSPORT */
+.transport { display: grid; grid-template-columns: auto auto auto auto auto 1fr auto auto; align-items: center; gap: 8px; padding: 8px 14px; border-top: 1px solid var(--border); background: var(--bg-panel); }
+.transport-btn { width: 28px; height: 28px; border-radius: 50%; background: var(--bg-elev); border: 1px solid var(--border-strong); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; transition: all 0.15s ease; }
+.transport-btn:hover { background: var(--bg-control); color: var(--text-primary); border-color: var(--teal); }
+.transport-btn.primary { background: var(--teal); color: var(--bg-deep); border-color: var(--teal); width: 32px; height: 32px; }
+.transport-btn.primary:hover { background: var(--teal-soft); box-shadow: 0 0 12px rgba(45,212,191,0.4); }
+.transport-btn svg { width: 11px; height: 11px; fill: currentColor; }
+.transport-btn.primary svg { width: 12px; height: 12px; }
+.scrubber-wrap { position: relative; height: 22px; margin: 0 4px; }
+.scrubber-track { position: absolute; top: 50%; left: 0; right: 0; height: 3px; margin-top: -1.5px; background: var(--bg-elev); border-radius: 1.5px; display: flex; }
+.scrubber-day { flex: 1; border-right: 1px solid var(--bg-deep); position: relative; }
+.scrubber-day:last-child { border-right: none; }
+.scrubber-day-label { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); font-family: var(--font-mono); font-size: 8.5px; color: var(--text-faint); letter-spacing: 0.4px; }
+.scrubber-fill { position: absolute; top: 50%; left: 0; height: 3px; margin-top: -1.5px; background: linear-gradient(90deg, var(--teal-deep), var(--teal)); border-radius: 1.5px; pointer-events: none; }
+.scrubber-input { position: absolute; inset: 0; width: 100%; margin: 0; }
+.scrubber-input::-webkit-slider-runnable-track { background: transparent; }
+.scrubber-input::-moz-range-track { background: transparent; }
+.time-tag { font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; color: var(--text-primary); letter-spacing: 0.3px; min-width: 96px; text-align: right; }
+.speed-group { display: flex; gap: 1px; background: var(--bg-elev); padding: 2px; border-radius: 999px; border: 1px solid var(--border); }
+.speed-group button { font-family: var(--font-mono); font-size: 9.5px; font-weight: 500; color: var(--text-dim); padding: 3px 7px; border-radius: 999px; transition: all 0.15s ease; }
+.speed-group button:hover { color: var(--text-secondary); }
+.speed-group button.active { background: var(--teal-deep); color: var(--text-primary); }
+
+/* RIGHT */
+.right { background: var(--bg-panel); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+.gh-block { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 7px; padding: 12px 14px; }
+.gh-score-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+.gh-score { font-family: var(--font-display); font-size: 36px; font-weight: 400; color: var(--teal); line-height: 1; font-variant-numeric: tabular-nums; }
+.gh-score-max { font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); }
+.gh-caption { font-size: 10px; color: var(--text-dim); letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: 10px; }
+.gh-bars { display: flex; flex-direction: column; gap: 6px; }
+.gh-bar { display: grid; grid-template-columns: 92px 1fr 30px; align-items: center; gap: 8px; font-size: 10.5px; }
+.gh-bar .name { color: var(--text-secondary); }
+.gh-bar .track { height: 5px; background: var(--bg-control); border-radius: 2.5px; overflow: hidden; }
+.gh-bar .fill { height: 100%; background: var(--teal); border-radius: 2.5px; width: 0%; transition: width 0.4s ease; }
+.gh-bar .pct { font-family: var(--font-mono); font-size: 10px; color: var(--text-primary); text-align: right; }
+.record-block { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.record-list { flex: 1; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 7px; padding: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; min-height: 100px; }
+.record-empty { text-align: center; color: var(--text-faint); padding: 20px 14px; font-style: italic; font-size: 11px; }
+.record-entry { padding: 6px 8px; background: var(--bg-panel); border-left: 2px solid var(--text-faint); border-radius: 3px; animation: slide-in 0.22s ease-out; }
+@keyframes slide-in { from { opacity: 0; transform: translateX(6px); } to { opacity: 1; transform: translateX(0); } }
+.record-entry.stage-anxiety   { border-left-color: var(--stage-anxiety); }
+.record-entry.stage-defensive { border-left-color: var(--stage-defensive); }
+.record-entry.stage-acting    { border-left-color: var(--stage-acting); }
+.record-entry.classified      { background: rgba(45,212,191,0.07); }
+.record-entry .time { font-family: var(--font-mono); color: var(--text-dim); font-size: 9.5px; margin-bottom: 2px; }
+.record-entry .body { color: var(--text-secondary); font-size: 10.5px; line-height: 1.4; }
+.record-entry .body strong { color: var(--text-primary); font-weight: 600; }
+
+/* MODALS */
+.modal-overlay { position: fixed; inset: 0; background: rgba(6,9,18,0.85); backdrop-filter: blur(6px); z-index: 60; display: none; align-items: center; justify-content: center; padding: 24px; }
+.modal-overlay.active { display: flex; }
+.modal { background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 10px; max-width: 580px; width: 100%; max-height: 85vh; overflow-y: auto; padding: 26px 30px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+.modal h2 { font-family: var(--font-display); font-size: 24px; font-weight: 400; margin-bottom: 12px; color: var(--text-primary); }
+.modal h3 { font-family: var(--font-display); font-size: 14px; font-weight: 400; color: var(--teal); margin-top: 18px; margin-bottom: 6px; font-style: italic; }
+.modal p { color: var(--text-secondary); margin-bottom: 10px; font-size: 12.5px; line-height: 1.6; }
+.modal p strong { color: var(--text-primary); font-weight: 600; }
+.modal .legend-grid { display: grid; grid-template-columns: auto 1fr; gap: 9px 12px; margin: 8px 0 12px; font-size: 12px; color: var(--text-secondary); line-height: 1.4; align-items: center; }
+.modal .legend-grid .swatch { width: 22px; height: 16px; border-radius: 3px; align-self: center; }
+.modal-close { position: absolute; top: 14px; right: 14px; width: 28px; height: 28px; border-radius: 50%; background: var(--bg-elev); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; font-size: 16px; line-height: 1; }
+.modal-close:hover { background: var(--bg-control); color: var(--text-primary); }
+
+/* AGENT CARD */
+.agent-card { position: absolute; top: 12px; right: 12px; width: 240px; background: rgba(15,22,38,0.97); border: 1px solid var(--border-strong); border-radius: 8px; padding: 12px 14px; z-index: 15; display: none; backdrop-filter: blur(8px); box-shadow: 0 10px 24px rgba(0,0,0,0.4); }
+.agent-card.active { display: block; }
+.agent-card-close { position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; border-radius: 50%; background: var(--bg-elev); color: var(--text-dim); font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.agent-card-close:hover { color: var(--text-primary); }
+.ac-role { font-family: var(--font-mono); font-size: 9px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 3px; }
+.ac-name { font-family: var(--font-display); font-size: 18px; font-weight: 400; color: var(--text-primary); line-height: 1.1; margin-bottom: 10px; }
+.ac-stats { display: flex; flex-direction: column; gap: 7px; border-top: 1px solid var(--border); padding-top: 9px; }
+.ac-stat { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 8px; font-size: 11px; }
+.ac-stat .label { color: var(--text-dim); }
+.ac-stat .val { font-family: var(--font-mono); font-weight: 500; color: var(--text-primary); font-size: 10.5px; }
+.ac-badge { display: inline-block; font-size: 9.5px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; }
+.ac-badge.regulated { background: rgba(110,231,163,0.15); color: var(--stage-regulated); }
+.ac-badge.anxiety   { background: rgba(251,191,36,0.15); color: var(--stage-anxiety); }
+.ac-badge.defensive { background: rgba(251,140,59,0.15); color: var(--stage-defensive); }
+.ac-badge.acting    { background: rgba(239,68,68,0.18); color: var(--stage-acting); }
+.ac-chart { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 9px; }
+.ac-chart-label { font-size: 9.5px; color: var(--text-dim); letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 5px; }
+.ac-chart svg { width: 100%; height: 56px; display: block; }
+
+/* OUTCOME */
+.outcome-panel { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%) translateY(20px); width: min(85%, 540px); background: rgba(15,22,38,0.97); border: 1px solid var(--border-strong); border-radius: 10px; padding: 16px 20px; z-index: 25; opacity: 0; pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease; backdrop-filter: blur(8px); box-shadow: 0 12px 28px rgba(0,0,0,0.5); }
+.outcome-panel.active { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+.outcome-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.outcome-title { font-family: var(--font-display); font-size: 18px; font-weight: 400; color: var(--text-primary); }
+.outcome-title .verdict { font-style: italic; }
+.outcome-title .verdict.contained { color: var(--stage-regulated); }
+.outcome-title .verdict.crisis { color: var(--stage-acting); }
+.outcome-close { width: 24px; height: 24px; border-radius: 50%; background: var(--bg-elev); color: var(--text-dim); font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+.outcome-body { font-size: 12px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 10px; }
+.outcome-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+.outcome-stat .num { font-family: var(--font-mono); font-size: 18px; font-weight: 600; color: var(--text-primary); line-height: 1; }
+.outcome-stat .num.teal { color: var(--teal); }
+.outcome-stat .num.red { color: var(--stage-acting); }
+.outcome-stat .lbl { font-size: 9px; color: var(--text-dim); letter-spacing: 0.4px; text-transform: uppercase; margin-top: 3px; }
+
+/* CLOSE-UP INSET */
+.closeup-panel { position: absolute; top: 12px; left: 12px; width: 220px; background: rgba(15,22,38,0.97); border: 1px solid var(--border-strong); border-radius: 8px; padding: 10px 12px; z-index: 18; opacity: 0; transform: translateY(-6px); pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; backdrop-filter: blur(8px); box-shadow: 0 10px 24px rgba(0,0,0,0.4); }
+.closeup-panel.active { opacity: 1; transform: translateY(0); }
+.closeup-label { font-family: var(--font-mono); font-size: 9px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+.closeup-svg { width: 100%; height: 110px; display: block; }
+.closeup-caption { font-size: 10.5px; color: var(--text-secondary); margin-top: 6px; line-height: 1.4; }
+.closeup-caption strong { color: var(--text-primary); font-weight: 600; }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg-elev); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--bg-control); }
+
+/* AGENT SVG STATES */
+.agent-group { cursor: pointer; transition: filter 0.15s ease; }
+.agent-group:hover { filter: brightness(1.15); }
+
+/* RESPONSIVE */
+@media (max-width: 1100px) { .main { grid-template-columns: 220px 1fr 240px; } }
+@media (max-width: 900px) {
+  body { overflow: auto; }
+  .app { height: auto; min-height: 100vh; }
+  .main { grid-template-columns: 1fr; grid-template-rows: auto 60vh auto; }
+  .left, .right { border-left: none; border-right: none; border-bottom: 1px solid var(--border); max-height: 40vh; }
+  .right { border-bottom: none; border-top: 1px solid var(--border); }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="title-block">
+      <h1>GRID <em>Observatory</em></h1>
+      <p>Interactive agent-based view of safeguarding governance in a non-verbal SEND classroom</p>
+    </div>
+    <div class="header-actions">
+      <button id="compareToggle">Compare</button>
+      <button id="legendBtn">What am I seeing?</button>
+      <button id="aboutBtn">What is GRID?</button>
+    </div>
+  </header>
+
+  <div class="main">
+
+    <!-- LEFT -->
+    <aside class="left">
+      <div class="section-block">
+        <div class="section-label">Operational Variables</div>
+        <div class="slider-row"><div class="slider-label"><span class="name">Staff workload</span><span class="value" id="val-workload">0.75</span></div><input type="range" id="ctl-workload" min="0" max="1" step="0.05" value="0.75"></div>
+        <div class="slider-row"><div class="slider-label"><span class="name">CPI coverage</span><span class="value" id="val-cpi">0.50</span></div><input type="range" id="ctl-cpi" min="0" max="1" step="0.05" value="0.50"></div>
+        <div class="slider-row"><div class="slider-label"><span class="name">Protected doc time</span><span class="value" id="val-doc">0.25</span></div><input type="range" id="ctl-doc" min="0" max="1" step="0.05" value="0.25"></div>
+        <div class="slider-row"><div class="slider-label"><span class="name">Environmental risk</span><span class="value" id="val-env">0.45</span></div><input type="range" id="ctl-env" min="0" max="1" step="0.05" value="0.45"></div>
+        <div class="slider-row emergent-row"><div class="slider-label"><span class="name">Recording rate</span><span class="value" id="val-rec">0.00</span></div><input type="range" id="ctl-rec" min="0" max="1" step="0.01" value="0" disabled></div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-label">Crisis Development Model</div>
+        <div class="cdm-list" id="cdmList">
+          <div class="cdm-item active" data-stage="regulated"><div class="cdm-dot regulated"></div>Regulated</div>
+          <div class="cdm-item" data-stage="anxiety"><div class="cdm-dot anxiety"></div>Anxiety</div>
+          <div class="cdm-item" data-stage="defensive"><div class="cdm-dot defensive"></div>Defensive</div>
+          <div class="cdm-item" data-stage="acting"><div class="cdm-dot acting"></div>Risk Behaviour</div>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-label">Governance Condition</div>
+        <div class="cond-options" id="condOptions">
+          <div class="cond-option" data-cond="baseline"><div class="cond-radio"></div><div><div class="lbl">Standard Baseline</div><div class="sub">Narrative reports only</div></div></div>
+          <div class="cond-option active" data-cond="grid"><div class="cond-radio"></div><div><div class="lbl">GRID Framework</div><div class="sub">Structured CPI + routing</div></div></div>
+          <div class="cond-option" data-cond="naive"><div class="cond-radio"></div><div><div class="lbl">Naive AI</div><div class="sub">Room-wide threat alert</div></div></div>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-label">External Event</div>
+        <select class="trigger-select" id="triggerType">
+          <option value="routine">Change in routine</option>
+          <option value="staff">Unfamiliar staff member</option>
+          <option value="alarm">Fire alarm</option>
+          <option value="transport">Bus lateness</option>
+        </select>
+        <button class="trigger-btn" id="triggerBtn">Simulate disruption</button>
+      </div>
+    </aside>
+
+    <!-- CENTRE -->
+    <section class="centre">
+      <div class="topbar">
+        <nav class="day-strip" id="dayStrip">
+          <button data-day="0">Mon</button>
+          <button data-day="1">Tue</button>
+          <button data-day="2">Wed</button>
+          <button data-day="3">Thu</button>
+          <button data-day="4">Fri</button>
+        </nav>
+        <div class="time-display" id="timeDisplay">Mon 09:00 · tick 0 / 360</div>
+      </div>
+
+      <div class="view">
+        <div class="viewport-single" style="position:absolute;inset:0;">
+          <svg id="schoolSvg" viewBox="0 0 1000 540" preserveAspectRatio="xMidYMid meet"></svg>
+
+          <!-- Commentary overlay -->
+          <div class="commentary-overlay" id="commentaryOverlay">
+            <div class="time" id="commentaryTime">Mon 09:00</div>
+            <div class="text" id="commentaryText">Idle. Adjust the variables on the left, choose a governance condition, then press play.</div>
+          </div>
+
+          <!-- Close-up inset: appears during observation events -->
+          <div class="closeup-panel" id="closeupPanel">
+            <div class="closeup-label">Close observation</div>
+            <svg class="closeup-svg" id="closeupSvg" viewBox="0 0 220 110" preserveAspectRatio="xMidYMid meet"></svg>
+            <div class="closeup-caption" id="closeupCaption"></div>
+          </div>
+
+          <!-- Agent card -->
+          <div class="agent-card" id="agentCard">
+            <button class="agent-card-close" id="agentCardClose">×</button>
+            <div class="ac-role" id="acRole">Role</div>
+            <div class="ac-name" id="acName">Agent</div>
+            <div class="ac-stats" id="acStats"></div>
+            <div class="ac-chart" id="acChart" style="display:none">
+              <div class="ac-chart-label">Stress trajectory</div>
+              <svg viewBox="0 0 240 56" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="trajGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--teal)" stop-opacity="0.5"/>
+                    <stop offset="100%" stop-color="var(--teal)" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <line x1="0" y1="39" x2="240" y2="39" stroke="rgba(251,191,36,0.25)" stroke-dasharray="2 3"/>
+                <line x1="0" y1="28" x2="240" y2="28" stroke="rgba(251,140,59,0.25)" stroke-dasharray="2 3"/>
+                <line x1="0" y1="17" x2="240" y2="17" stroke="rgba(239,68,68,0.25)" stroke-dasharray="2 3"/>
+                <path id="acTrajFill" d="" fill="url(#trajGrad)"/>
+                <path id="acTrajLine" d="" stroke="var(--teal)" stroke-width="1.5" fill="none"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Outcome -->
+          <div class="outcome-panel" id="outcomePanel">
+            <div class="outcome-head">
+              <div class="outcome-title" id="outcomeTitle">The week ended</div>
+              <button class="outcome-close" id="outcomeClose">×</button>
+            </div>
+            <div class="outcome-body" id="outcomeBody"></div>
+            <div class="outcome-stats" id="outcomeStats"></div>
+          </div>
+        </div>
+
+        <!-- Compare mode -->
+        <div class="viewport-compare" id="viewportCompare">
+          <div class="compare-panel" data-cond="baseline"><div class="compare-head"><div class="name">Baseline</div><div class="desc">Narrative only</div></div><div class="compare-svg-wrap"><svg class="compare-svg" id="cmpSvgBaseline" viewBox="0 0 1000 540" preserveAspectRatio="xMidYMid meet"></svg></div><div class="compare-stats"><div class="compare-stat"><div class="stat-num" id="cmpStatBaselineHealth">100</div><div class="stat-label">Health</div></div><div class="compare-stat"><div class="stat-num" id="cmpStatBaselineLogs">0</div><div class="stat-label">Logs</div></div><div class="compare-stat"><div class="stat-num" id="cmpStatBaselineStress">0.00</div><div class="stat-label">Stress</div></div></div></div>
+          <div class="compare-panel" data-cond="grid"><div class="compare-head"><div class="name">GRID</div><div class="desc">Structured + routed</div></div><div class="compare-svg-wrap"><svg class="compare-svg" id="cmpSvgGrid" viewBox="0 0 1000 540" preserveAspectRatio="xMidYMid meet"></svg></div><div class="compare-stats"><div class="compare-stat"><div class="stat-num" id="cmpStatGridHealth">100</div><div class="stat-label">Health</div></div><div class="compare-stat"><div class="stat-num" id="cmpStatGridLogs">0</div><div class="stat-label">Logs</div></div><div class="compare-stat"><div class="stat-num" id="cmpStatGridStress">0.00</div><div class="stat-label">Stress</div></div></div></div>
+          <div class="compare-panel" data-cond="naive"><div class="compare-head"><div class="name">Naive AI</div><div class="desc">Room-wide alert</div></div><div class="compare-svg-wrap"><svg class="compare-svg" id="cmpSvgNaive" viewBox="0 0 1000 540" preserveAspectRatio="xMidYMid meet"></svg></div><div class="compare-stats"><div class="compare-stat"><div class="stat-num" id="cmpStatNaiveHealth">100</div><div class="stat-label">Health</div></div><div class="compare-stat"><div class="stat-num" id="cmpStatNaiveLogs">0</div><div class="stat-label">Logs</div></div><div class="compare-stat"><div class="stat-num" id="cmpStatNaiveStress">0.00</div><div class="stat-label">Stress</div></div></div></div>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button class="transport-btn" id="resetBtn" title="Reset"><svg viewBox="0 0 16 16"><path d="M8 2a6 6 0 1 1-5.65 8H4.3A4.5 4.5 0 1 0 8 3.5V6L4 3l4-3v2z"/></svg></button>
+        <button class="transport-btn" id="stepBackBtn" title="Step back"><svg viewBox="0 0 16 16"><path d="M5 2v12H3V2h2zm9 0L7 8l7 6V2z"/></svg></button>
+        <button class="transport-btn primary" id="playPauseBtn" title="Play/Pause"><svg viewBox="0 0 16 16" id="playIcon"><path d="M3 1.5v13l11-6.5z"/></svg><svg viewBox="0 0 16 16" id="pauseIcon" style="display:none"><path d="M3 2h3v12H3zM10 2h3v12h-3z"/></svg></button>
+        <button class="transport-btn" id="stepForwardBtn" title="Step forward"><svg viewBox="0 0 16 16"><path d="M11 2v12h2V2h-2zM2 2l7 6-7 6V2z"/></svg></button>
+        <button class="transport-btn" id="endBtn" title="Jump to Thursday"><svg viewBox="0 0 16 16"><path d="M3 2l9 6-9 6V2z"/><rect x="13" y="2" width="1.5" height="12"/></svg></button>
+        <div class="scrubber-wrap">
+          <div class="scrubber-track">
+            <div class="scrubber-day"><span class="scrubber-day-label">MON</span></div>
+            <div class="scrubber-day"><span class="scrubber-day-label">TUE</span></div>
+            <div class="scrubber-day"><span class="scrubber-day-label">WED</span></div>
+            <div class="scrubber-day"><span class="scrubber-day-label">THU</span></div>
+            <div class="scrubber-day"><span class="scrubber-day-label">FRI</span></div>
+          </div>
+          <div class="scrubber-fill" id="scrubberFill"></div>
+          <input type="range" class="scrubber-input" id="scrubber" min="0" max="359" value="0">
+        </div>
+        <div class="time-tag" id="timeTag">Mon 09:00</div>
+        <div class="speed-group" id="speedGroup"><button data-speed="0.5">0.5×</button><button data-speed="1" class="active">1×</button><button data-speed="2">2×</button><button data-speed="4">4×</button></div>
+      </div>
+    </section>
+
+    <!-- RIGHT -->
+    <aside class="right">
+      <div class="gh-block">
+        <div class="section-label">Governance Health</div>
+        <div class="gh-score-row"><div class="gh-score" id="ghScore">100</div><div class="gh-score-max">/ 100</div></div>
+        <div class="gh-caption">composite score</div>
+        <div class="gh-bars">
+          <div class="gh-bar"><div class="name">Documentation</div><div class="track"><div class="fill" id="ghDocFill"></div></div><div class="pct" id="ghDocPct">0</div></div>
+          <div class="gh-bar"><div class="name">Classification</div><div class="track"><div class="fill" id="ghClsFill"></div></div><div class="pct" id="ghClsPct">0</div></div>
+          <div class="gh-bar"><div class="name">Crisis avoidance</div><div class="track"><div class="fill" id="ghAvdFill"></div></div><div class="pct" id="ghAvdPct">100</div></div>
+        </div>
+      </div>
+      <div class="record-block">
+        <div class="section-label">Institutional Record</div>
+        <div class="record-list" id="recordList">
+          <div class="record-empty">No entries yet. Press play to begin the week.</div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<!-- ABOUT MODAL -->
+<div class="modal-overlay" id="aboutModal">
+  <div class="modal">
+    <button class="modal-close" data-close>×</button>
+    <h2>What is GRID?</h2>
+    <p><strong>GRID</strong> (Governance Risk and Infrastructure Diagnostics for SEND-AI Environments) is a computational governance framework for non-verbal SEND settings. It addresses a structural gap: non-verbal autistic learners cannot self-report safeguarding concerns. Their behaviour is the only disclosure mechanism. But sub-threshold behaviour rarely reaches the institutional record under narrative reporting and high workload.</p>
+    <h3>What this Observatory shows</h3>
+    <p>One classroom across a working week. The Focal Student is a non-verbal learner. Trained and untrained staff move around the room. The Behavioural Lead and DSL sit in their adjoining offices. Three governance conditions can be selected. Watch what reaches the record, and how the Focal Student's stress trajectory differs across architectures.</p>
+    <h3>Why the building view matters</h3>
+    <p>Under GRID, a flag travels from the classroom to the correct office (DSL for cumulative harm, Behavioural Lead for trigger isolation). Under Naive AI, an alert flashes the whole room. Under Baseline, nothing structured leaves at all. The architecture difference is visible.</p>
+  </div>
+</div>
+
+<!-- LEGEND MODAL -->
+<div class="modal-overlay" id="legendModal">
+  <div class="modal">
+    <button class="modal-close" data-close>×</button>
+    <h2>What am I seeing?</h2>
+    <div class="legend-grid">
+      <div class="swatch" style="background:var(--stage-regulated); box-shadow: 0 0 10px var(--stage-regulated)"></div>
+      <div><strong style="color:var(--stage-regulated)">Green halo</strong> · Regulated. Learner is calm.</div>
+      <div class="swatch" style="background:var(--stage-anxiety); box-shadow: 0 0 10px var(--stage-anxiety)"></div>
+      <div><strong style="color:var(--stage-anxiety)">Amber halo</strong> · Anxiety. Early sub-crisis signal.</div>
+      <div class="swatch" style="background:var(--stage-defensive); box-shadow: 0 0 10px var(--stage-defensive)"></div>
+      <div><strong style="color:var(--stage-defensive)">Orange halo</strong> · Defensive. Escalation in progress.</div>
+      <div class="swatch" style="background:var(--stage-acting); box-shadow: 0 0 10px var(--stage-acting)"></div>
+      <div><strong style="color:var(--stage-acting)">Red halo</strong> · Risk Behaviour. Crisis-level behaviour.</div>
+      <div class="swatch" style="background:var(--teal)"></div>
+      <div><strong style="color:var(--teal)">Teal staff</strong> · CPI-trained staff member.</div>
+      <div class="swatch" style="background:#cfd6e3; border:1px solid var(--border-strong)"></div>
+      <div><strong style="color:#cfd6e3">Pale staff</strong> · Untrained or supply staff.</div>
+      <div class="swatch" style="background:var(--cyan); box-shadow: 0 0 10px var(--cyan)"></div>
+      <div><strong style="color:var(--cyan)">Cyan beam</strong> · Observation event. Staff is noticing a learner.</div>
+      <div class="swatch" style="background:linear-gradient(90deg, var(--teal), transparent)"></div>
+      <div><strong style="color:var(--teal)">Teal pulse</strong> · GRID flag routing to the DSL or Behavioural Lead.</div>
+      <div class="swatch" style="background:var(--stage-defensive); box-shadow: 0 0 10px var(--stage-defensive)"></div>
+      <div><strong style="color:var(--stage-defensive)">Orange pulse</strong> · Operational disruption (e.g. routine change, fire alarm).</div>
+      <div class="swatch" style="background:rgba(239,68,68,0.3); border:1px solid var(--stage-acting)"></div>
+      <div><strong style="color:var(--stage-acting)">Red wash</strong> · Naive AI room-wide threat alert.</div>
+    </div>
+    <p style="margin-top:12px"><strong>Interact:</strong> Click any agent for an info card. Scrub the timeline. Step forward or back. Switch governance conditions. Toggle Compare to see all three side by side.</p>
+  </div>
+</div>
+
+<script>
+/* ===========================================================
+   GRID OBSERVATORY · compact isometric layout
+   =========================================================== */
+
+const CONFIG = {
+  TOTAL_TICKS: 360, TICKS_PER_DAY: 72, DAYS: ['Mon','Tue','Wed','Thu','Fri'],
+  START_HOUR: 9, MINUTES_PER_TICK: 5, EXTERNAL_TRIGGER_TICK: 264,
+  DECAY: 0.85, KAPPA: 0.18, CRISIS_THRESHOLD: 0.70, TICK_INTERVAL_MS: 110,
+};
+
+const ROLES = {
+  FOCAL:  { id:'focal',  label:'Focal Student',                  kind:'learner', focal:true },
+  L2:     { id:'l2',     label:'Learner 2',                      kind:'learner' },
+  L3:     { id:'l3',     label:'Learner 3',                      kind:'learner' },
+  L4:     { id:'l4',     label:'Learner 4',                      kind:'learner' },
+  CT:     { id:'ct',     label:'Class Teacher',                  kind:'staff', cpi:true,  senior:true },
+  LSP1:   { id:'lsp1',   label:'Learning Support Practitioner 1', kind:'staff', cpi:true },
+  LSP2:   { id:'lsp2',   label:'Learning Support Practitioner 2', kind:'staff', cpi:false },
+  SUPPLY: { id:'supply', label:'Supply LSP',                     kind:'staff', cpi:false },
+  BL:     { id:'bl',     label:'Behavioural Lead',               kind:'lead' },
+  DSL:    { id:'dsl',    label:'Designated Safeguarding Lead',    kind:'lead' },
+};
+
+/* Isometric layout: classroom on left, BL/DSL offices on right.
+   Classroom corners (front-bottom-left, FBR, BTR, BTL): parallelogram. */
+const CLASSROOM = { fbl:[100,440], fbr:[640,440], btr:[700,220], btl:[160,220] };
+const BL_OFFICE = { fbl:[745,290], fbr:[935,290], btr:[955,220], btl:[765,220] };
+const DSL_OFFICE = { fbl:[745,450], fbr:[935,450], btr:[955,380], btl:[765,380] };
+
+const AGENT_POS = {
+  focal:  [320, 350],
+  l2:     [230, 290],
+  l3:     [420, 320],
+  l4:     [220, 400],
+  ct:     [520, 280],
+  lsp1:   [450, 380],
+  lsp2:   [320, 270],
+  supply: [550, 410],
+  bl:     [850, 260],
+  dsl:    [850, 420],
+};
+
+function buildSchoolSvg(svg) {
+  const ns = 'http://www.w3.org/2000/svg';
+  svg.innerHTML = '';
+
+  const defs = document.createElementNS(ns, 'defs');
+  defs.innerHTML = `
+    <radialGradient id="haloRegulated" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#6ee7a3" stop-opacity="0.55"/><stop offset="50%" stop-color="#6ee7a3" stop-opacity="0.25"/><stop offset="100%" stop-color="#6ee7a3" stop-opacity="0"/></radialGradient>
+    <radialGradient id="haloAnxiety" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fbbf24" stop-opacity="0.6"/><stop offset="50%" stop-color="#fbbf24" stop-opacity="0.3"/><stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/></radialGradient>
+    <radialGradient id="haloDefensive" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fb8c3b" stop-opacity="0.7"/><stop offset="50%" stop-color="#fb8c3b" stop-opacity="0.35"/><stop offset="100%" stop-color="#fb8c3b" stop-opacity="0"/></radialGradient>
+    <radialGradient id="haloActing" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.8"/><stop offset="50%" stop-color="#ef4444" stop-opacity="0.4"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0"/></radialGradient>
+    <radialGradient id="haloTeal" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#2dd4bf" stop-opacity="0.55"/><stop offset="50%" stop-color="#2dd4bf" stop-opacity="0.25"/><stop offset="100%" stop-color="#2dd4bf" stop-opacity="0"/></radialGradient>
+    <radialGradient id="haloWhite" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffffff" stop-opacity="0.35"/><stop offset="50%" stop-color="#ffffff" stop-opacity="0.15"/><stop offset="100%" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="floorGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1c2740" stop-opacity="0.85"/><stop offset="100%" stop-color="#0f1626" stop-opacity="0.95"/></linearGradient>
+    <linearGradient id="officeFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a2238" stop-opacity="0.9"/><stop offset="100%" stop-color="#0e1422" stop-opacity="0.95"/></linearGradient>
+    <pattern id="floorGrid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse"><rect width="40" height="40" fill="transparent"/><path d="M0 40 L40 40 M40 0 L40 40" stroke="rgba(45,212,191,0.06)" stroke-width="0.5"/></pattern>
+  `;
+  svg.appendChild(defs);
+
+  // Background ambient
+  const bg = document.createElementNS(ns, 'rect');
+  bg.setAttribute('x', 0); bg.setAttribute('y', 0);
+  bg.setAttribute('width', 1000); bg.setAttribute('height', 540);
+  bg.setAttribute('fill', 'var(--bg-canvas)');
+  svg.appendChild(bg);
+
+  // Subtle ground hint (low-contrast tile lines, NOT a football pitch)
+  for (let i = 0; i < 4; i++) {
+    const ln = document.createElementNS(ns, 'line');
+    ln.setAttribute('x1', 0); ln.setAttribute('y1', 470 + i * 15);
+    ln.setAttribute('x2', 1000); ln.setAttribute('y2', 490 + i * 15);
+    ln.setAttribute('stroke', 'rgba(255,255,255,0.02)'); ln.setAttribute('stroke-width', 0.5);
+    svg.appendChild(ln);
+  }
+
+  // Small tree silhouettes for context (corner decoration, minimal)
+  const trees = [[45, 200], [55, 380], [990, 130], [985, 480], [40, 60]];
+  trees.forEach(([x, y]) => {
+    const g = document.createElementNS(ns, 'g');
+    g.setAttribute('opacity', 0.32);
+    const trunk = document.createElementNS(ns, 'line');
+    trunk.setAttribute('x1', x); trunk.setAttribute('y1', y + 6); trunk.setAttribute('x2', x); trunk.setAttribute('y2', y + 14);
+    trunk.setAttribute('stroke', '#5a4a3a'); trunk.setAttribute('stroke-width', 1.5);
+    g.appendChild(trunk);
+    const tri = document.createElementNS(ns, 'path');
+    tri.setAttribute('d', `M${x-7} ${y+6} L${x} ${y-10} L${x+7} ${y+6} Z`);
+    tri.setAttribute('fill', '#2e4a2e'); tri.setAttribute('stroke', '#4a6e4a'); tri.setAttribute('stroke-width', 0.8);
+    g.appendChild(tri);
+    svg.appendChild(g);
+  });
+
+  // CLASSROOM floor (parallelogram)
+  const room = document.createElementNS(ns, 'path');
+  const c = CLASSROOM;
+  room.setAttribute('d', `M ${c.btl[0]} ${c.btl[1]} L ${c.btr[0]} ${c.btr[1]} L ${c.fbr[0]} ${c.fbr[1]} L ${c.fbl[0]} ${c.fbl[1]} Z`);
+  room.setAttribute('fill', 'url(#floorGrad)');
+  room.setAttribute('stroke', 'rgba(45,212,191,0.4)');
+  room.setAttribute('stroke-width', 1.2);
+  svg.appendChild(room);
+
+  // Floor inner glow with tile lines
+  const floorTiles = document.createElementNS(ns, 'path');
+  floorTiles.setAttribute('d', `M ${c.btl[0]} ${c.btl[1]} L ${c.btr[0]} ${c.btr[1]} L ${c.fbr[0]} ${c.fbr[1]} L ${c.fbl[0]} ${c.fbl[1]} Z`);
+  floorTiles.setAttribute('fill', 'url(#floorGrid)');
+  floorTiles.setAttribute('id', 'classroomFloor');
+  svg.appendChild(floorTiles);
+
+  // CLASSROOM label
+  const roomLbl = document.createElementNS(ns, 'text');
+  roomLbl.setAttribute('x', (c.btl[0] + c.btr[0]) / 2);
+  roomLbl.setAttribute('y', c.btl[1] - 10);
+  roomLbl.setAttribute('text-anchor', 'middle');
+  roomLbl.setAttribute('fill', 'rgba(45,212,191,0.5)');
+  roomLbl.setAttribute('font-family', 'JetBrains Mono, monospace');
+  roomLbl.setAttribute('font-size', 9);
+  roomLbl.setAttribute('font-weight', 600);
+  roomLbl.setAttribute('letter-spacing', '2.5');
+  roomLbl.textContent = 'CLASSROOM · ZONE A · KS3 SEND';
+  svg.appendChild(roomLbl);
+
+  // Furniture (small parallelograms reflecting room perspective)
+  const furniture = [
+    { fbl:[180,250], fbr:[280,250], btr:[280,235], btl:[195,235], label:'WORKSTATIONS' },
+    { fbl:[300,250], fbr:[400,250], btr:[400,235], btl:[315,235] },
+    { fbl:[420,250], fbr:[520,250], btr:[520,235], btl:[435,235] },
+    { fbl:[260,320], fbr:[480,320], btr:[480,290], btl:[280,290], label:'CARPET AREA', highlight:true },
+    { fbl:[540,260], fbr:[620,260], btr:[620,240], btl:[555,240], label:'TEACHER STN' },
+    { fbl:[180,420], fbr:[260,420], btr:[260,395], btl:[195,395], label:'SENSORY MAT' },
+    { fbl:[500,420], fbr:[610,420], btr:[610,395], btl:[515,395], label:'STORAGE' },
+  ];
+  furniture.forEach(f => {
+    const p = document.createElementNS(ns, 'path');
+    p.setAttribute('d', `M ${f.btl[0]} ${f.btl[1]} L ${f.btr[0]} ${f.btr[1]} L ${f.fbr[0]} ${f.fbr[1]} L ${f.fbl[0]} ${f.fbl[1]} Z`);
+    p.setAttribute('fill', f.highlight ? 'rgba(45,212,191,0.05)' : 'rgba(255,255,255,0.03)');
+    p.setAttribute('stroke', f.highlight ? 'rgba(45,212,191,0.25)' : 'rgba(255,255,255,0.1)');
+    p.setAttribute('stroke-width', 0.7);
+    svg.appendChild(p);
+    if (f.label) {
+      const t = document.createElementNS(ns, 'text');
+      t.setAttribute('x', (f.fbl[0] + f.fbr[0]) / 2);
+      t.setAttribute('y', f.fbl[1] + 9);
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('fill', 'rgba(255,255,255,0.22)');
+      t.setAttribute('font-family', 'JetBrains Mono, monospace');
+      t.setAttribute('font-size', 6.5);
+      t.setAttribute('letter-spacing', '0.8');
+      t.textContent = f.label;
+      svg.appendChild(t);
+    }
+  });
+
+  // Door indicator (gap with arrow)
+  const door = document.createElementNS(ns, 'g');
+  door.innerHTML = `
+    <line x1="${c.btr[0]}" y1="${c.btr[1]+30}" x2="${c.btr[0]+8}" y2="${c.btr[1]+30}" stroke="rgba(45,212,191,0.5)" stroke-width="1.5"/>
+    <text x="${c.btr[0]+12}" y="${c.btr[1]+33}" fill="rgba(45,212,191,0.5)" font-family="JetBrains Mono, monospace" font-size="6" letter-spacing="0.8">DOOR</text>
+  `;
+  svg.appendChild(door);
+
+  // CORRIDOR connecting classroom to offices
+  const corridor = document.createElementNS(ns, 'path');
+  corridor.setAttribute('d', `M ${c.btr[0]} ${c.btr[1]+25} L 745 ${c.btr[1]+25} L 745 ${c.btr[1]+45} L ${c.btr[0]} ${c.btr[1]+45} Z`);
+  corridor.setAttribute('fill', 'rgba(45,212,191,0.05)');
+  corridor.setAttribute('stroke', 'rgba(45,212,191,0.2)');
+  corridor.setAttribute('stroke-width', 0.6);
+  svg.appendChild(corridor);
+
+  // BL OFFICE
+  const blRoom = document.createElementNS(ns, 'path');
+  const b = BL_OFFICE;
+  blRoom.setAttribute('d', `M ${b.btl[0]} ${b.btl[1]} L ${b.btr[0]} ${b.btr[1]} L ${b.fbr[0]} ${b.fbr[1]} L ${b.fbl[0]} ${b.fbl[1]} Z`);
+  blRoom.setAttribute('fill', 'url(#officeFloor)');
+  blRoom.setAttribute('stroke', 'rgba(45,212,191,0.3)');
+  blRoom.setAttribute('stroke-width', 1);
+  svg.appendChild(blRoom);
+  const blLbl = document.createElementNS(ns, 'text');
+  blLbl.setAttribute('x', (b.btl[0] + b.btr[0]) / 2);
+  blLbl.setAttribute('y', b.btl[1] - 5);
+  blLbl.setAttribute('text-anchor', 'middle');
+  blLbl.setAttribute('fill', 'rgba(45,212,191,0.45)');
+  blLbl.setAttribute('font-family', 'JetBrains Mono, monospace');
+  blLbl.setAttribute('font-size', 7.5);
+  blLbl.setAttribute('font-weight', 600);
+  blLbl.setAttribute('letter-spacing', '1.5');
+  blLbl.textContent = 'BEHAVIOURAL LEAD';
+  svg.appendChild(blLbl);
+
+  // DSL OFFICE
+  const dslRoom = document.createElementNS(ns, 'path');
+  const d = DSL_OFFICE;
+  dslRoom.setAttribute('d', `M ${d.btl[0]} ${d.btl[1]} L ${d.btr[0]} ${d.btr[1]} L ${d.fbr[0]} ${d.fbr[1]} L ${d.fbl[0]} ${d.fbl[1]} Z`);
+  dslRoom.setAttribute('fill', 'url(#officeFloor)');
+  dslRoom.setAttribute('stroke', 'rgba(45,212,191,0.3)');
+  dslRoom.setAttribute('stroke-width', 1);
+  svg.appendChild(dslRoom);
+  const dslLbl = document.createElementNS(ns, 'text');
+  dslLbl.setAttribute('x', (d.btl[0] + d.btr[0]) / 2);
+  dslLbl.setAttribute('y', d.btl[1] - 5);
+  dslLbl.setAttribute('text-anchor', 'middle');
+  dslLbl.setAttribute('fill', 'rgba(45,212,191,0.45)');
+  dslLbl.setAttribute('font-family', 'JetBrains Mono, monospace');
+  dslLbl.setAttribute('font-size', 7.5);
+  dslLbl.setAttribute('font-weight', 600);
+  dslLbl.setAttribute('letter-spacing', '1.5');
+  dslLbl.textContent = 'DSL OFFICE';
+  svg.appendChild(dslLbl);
+
+  // Routing path (invisible guide for signal animation)
+  const routeBL = document.createElementNS(ns, 'path');
+  routeBL.setAttribute('id', 'routeToBL');
+  routeBL.setAttribute('d', `M 680 360 L 740 360 L 740 270 L 820 270`);
+  routeBL.setAttribute('fill', 'none'); routeBL.setAttribute('stroke', 'transparent');
+  svg.appendChild(routeBL);
+
+  const routeDSL = document.createElementNS(ns, 'path');
+  routeDSL.setAttribute('id', 'routeToDSL');
+  routeDSL.setAttribute('d', `M 680 360 L 740 360 L 740 420 L 820 420`);
+  routeDSL.setAttribute('fill', 'none'); routeDSL.setAttribute('stroke', 'transparent');
+  svg.appendChild(routeDSL);
+
+  // Dynamic layers
+  const effectsLayer = document.createElementNS(ns, 'g');
+  effectsLayer.setAttribute('id', 'effectsLayer');
+  svg.appendChild(effectsLayer);
+
+  const agentsLayer = document.createElementNS(ns, 'g');
+  agentsLayer.setAttribute('id', 'agentsLayer');
+  svg.appendChild(agentsLayer);
+
+  const signalLayer = document.createElementNS(ns, 'g');
+  signalLayer.setAttribute('id', 'signalLayer');
+  svg.appendChild(signalLayer);
+
+  // AGENTS (person silhouettes)
+  Object.values(ROLES).forEach(role => {
+    const [x, y] = AGENT_POS[role.id];
+    const g = document.createElementNS(ns, 'g');
+    g.setAttribute('class', 'agent-group');
+    g.setAttribute('data-id', role.id);
+    g.setAttribute('transform', `translate(${x},${y})`);
+
+    // Halo
+    const halo = document.createElementNS(ns, 'circle');
+    halo.setAttribute('class', 'halo');
+    halo.setAttribute('r', role.focal ? 22 : (role.kind === 'lead' ? 20 : 16));
+    halo.setAttribute('fill', 'url(#haloRegulated)');
+    g.appendChild(halo);
+
+    if (role.kind === 'learner') {
+      // Body: pill shape
+      const body = document.createElementNS(ns, 'rect');
+      body.setAttribute('x', role.focal ? -4.5 : -4); body.setAttribute('y', -1);
+      body.setAttribute('width', role.focal ? 9 : 8); body.setAttribute('height', role.focal ? 9 : 8);
+      body.setAttribute('rx', 3); body.setAttribute('ry', 3);
+      body.setAttribute('fill', role.focal ? '#7aa5cc' : '#8a9bb5');
+      body.setAttribute('stroke', 'rgba(0,0,0,0.4)'); body.setAttribute('stroke-width', 0.5);
+      g.appendChild(body);
+      // Head
+      const head = document.createElementNS(ns, 'circle');
+      head.setAttribute('cx', 0); head.setAttribute('cy', role.focal ? -5 : -4.5);
+      head.setAttribute('r', role.focal ? 3.2 : 2.8);
+      head.setAttribute('fill', 'var(--skin)');
+      head.setAttribute('stroke', 'rgba(0,0,0,0.3)'); head.setAttribute('stroke-width', 0.4);
+      g.appendChild(head);
+      // Focal marker (double ring)
+      if (role.focal) {
+        const ring = document.createElementNS(ns, 'circle');
+        ring.setAttribute('cx', 0); ring.setAttribute('cy', 0); ring.setAttribute('r', 11);
+        ring.setAttribute('fill', 'none');
+        ring.setAttribute('stroke', 'rgba(45,212,191,0.6)');
+        ring.setAttribute('stroke-width', 0.8);
+        ring.setAttribute('stroke-dasharray', '2 2');
+        g.appendChild(ring);
+      }
+    } else {
+      // Staff or lead: square body
+      const body = document.createElementNS(ns, 'rect');
+      const bodyW = role.kind === 'lead' ? 11 : 10;
+      const bodyH = role.kind === 'lead' ? 9 : 8;
+      body.setAttribute('x', -bodyW/2); body.setAttribute('y', 0);
+      body.setAttribute('width', bodyW); body.setAttribute('height', bodyH);
+      body.setAttribute('rx', 2); body.setAttribute('ry', 2);
+      body.setAttribute('fill', role.cpi ? 'var(--teal)' : (role.kind === 'lead' ? '#cfd6e3' : '#cfd6e3'));
+      body.setAttribute('stroke', 'rgba(0,0,0,0.4)'); body.setAttribute('stroke-width', 0.5);
+      g.appendChild(body);
+      // Head
+      const head = document.createElementNS(ns, 'circle');
+      head.setAttribute('cx', 0); head.setAttribute('cy', -3);
+      head.setAttribute('r', role.kind === 'lead' ? 3.5 : 3);
+      head.setAttribute('fill', 'var(--skin)');
+      head.setAttribute('stroke', 'rgba(0,0,0,0.3)'); head.setAttribute('stroke-width', 0.4);
+      g.appendChild(head);
+      // Senior marker
+      if (role.senior || role.kind === 'lead') {
+        const star = document.createElementNS(ns, 'circle');
+        star.setAttribute('cx', 5.5); star.setAttribute('cy', -5);
+        star.setAttribute('r', 1.6);
+        star.setAttribute('fill', '#fbbf24');
+        star.setAttribute('stroke', 'rgba(0,0,0,0.4)'); star.setAttribute('stroke-width', 0.3);
+        g.appendChild(star);
+      }
+    }
+
+    // Label
+    const lbl = document.createElementNS(ns, 'text');
+    lbl.setAttribute('x', 0);
+    lbl.setAttribute('y', role.focal ? 22 : (role.kind === 'lead' ? 22 : 18));
+    lbl.setAttribute('text-anchor', 'middle');
+    lbl.setAttribute('fill', 'rgba(255,255,255,0.6)');
+    lbl.setAttribute('font-family', 'JetBrains Mono, monospace');
+    lbl.setAttribute('font-size', 6.8);
+    lbl.setAttribute('font-weight', 600);
+    lbl.setAttribute('letter-spacing', '0.8');
+    const shortLabels = { focal:'FOCAL', l2:'L2', l3:'L3', l4:'L4', ct:'CT', lsp1:'LSP·1', lsp2:'LSP·2', supply:'SUPPLY', bl:'BL', dsl:'DSL' };
+    lbl.textContent = shortLabels[role.id];
+    g.appendChild(lbl);
+
+    agentsLayer.appendChild(g);
+  });
+}
+
+/* ============= SIMULATION ============= */
+function createSimState(condition) {
+  return {
+    condition, tick: 0, stress: 0.05, stressHistory: [], staffDefensiveStance: 0.20,
+    unclassifiedConcerns: 0, classifiedSignals: 0, totalLogs: 0, record: [],
+    crisis: false, crisisTick: null, triggerFired: false, triggerTick: null,
+    naiveAlertActive: false, naiveAlertTick: null,
+    gridDslAlerted: false, gridBlAlerted: false, lowArousalActive: false,
+    pendingSignals: [], pendingObservations: [], commentaryLog: [],
+  };
+}
+
+function tickToTime(tick) {
+  const day = Math.floor(tick / CONFIG.TICKS_PER_DAY);
+  const tickInDay = tick % CONFIG.TICKS_PER_DAY;
+  const totalMin = tickInDay * CONFIG.MINUTES_PER_TICK;
+  const hour = CONFIG.START_HOUR + Math.floor(totalMin / 60);
+  const min = totalMin % 60;
+  return { day, dayName: CONFIG.DAYS[day], label: `${CONFIG.DAYS[day]} ${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}` };
+}
+
+function stressToStage(s) { return s >= 0.70 ? 'acting' : s >= 0.50 ? 'defensive' : s >= 0.30 ? 'anxiety' : 'regulated'; }
+function stageLabel(s) { return { regulated:'Regulated', anxiety:'Anxiety', defensive:'Defensive', acting:'Risk Behaviour' }[s]; }
+
+function makeRng(seed) {
+  let s = seed | 0;
+  return function () { s = (s * 1664525 + 1013904223) | 0; return ((s >>> 0) % 1000000) / 1000000; };
+}
+
+function stepSim(sim, params, rng) {
+  const t = sim.tick;
+  const cond = sim.condition;
+  const { workload, cpi, doc, env } = params;
+  const observerProb = (1 - workload * 0.65) * (cpi * 0.7 + 0.3) * 0.45;
+
+  let envEvent = rng() < env * 0.04 ? (rng() * 0.05 + 0.02) : 0;
+  let triggerMag = 0;
+  if (!sim.triggerFired && t === CONFIG.EXTERNAL_TRIGGER_TICK) {
+    sim.triggerFired = true; sim.triggerTick = t; triggerMag = 0.45;
+    sim.pendingSignals.push({ kind: 'trigger' });
+    sim.commentaryLog.push({ tick: t, html: `<span class="stage-tag def">External event:</span> precipitant arrives at the building.` });
+  }
+  if (sim.lowArousalActive) triggerMag *= 0.35;
+
+  if (cond === 'naive' && sim.naiveAlertActive) sim.staffDefensiveStance = 0.85;
+  else if (sim.lowArousalActive) sim.staffDefensiveStance = Math.max(0.12, sim.staffDefensiveStance * 0.94);
+  else { const baseline = 0.18 + workload * 0.18; sim.staffDefensiveStance += (baseline - sim.staffDefensiveStance) * 0.08; }
+
+  const noise = (rng() - 0.5) * 0.02;
+  sim.stress = CONFIG.DECAY * sim.stress + sim.staffDefensiveStance * CONFIG.KAPPA + envEvent + triggerMag + noise;
+  sim.stress = Math.max(0, Math.min(1.0, sim.stress));
+  sim.stressHistory.push(sim.stress);
+
+  if (sim.stress >= CONFIG.CRISIS_THRESHOLD && !sim.crisis) {
+    sim.crisis = true; sim.crisisTick = t;
+    sim.commentaryLog.push({ tick: t, html: `<span class="stage-tag act">Crisis:</span> Focal Student crossed into Risk Behaviour. CPI Safety Intervention invoked.` });
+    sim.record.push({ tick: t, stage: 'acting', classified: true, actor: 'CT', body: `<strong>Risk Behaviour</strong>. Physical intervention required.` });
+    sim.totalLogs++; sim.classifiedSignals++;
+  }
+
+  if (!sim.crisis && rng() < observerProb) {
+    const observerIsTrained = rng() < cpi;
+    const observerId = observerIsTrained ? (rng() < 0.5 ? 'ct' : 'lsp1') : (rng() < 0.5 ? 'lsp2' : 'supply');
+    const stage = stressToStage(sim.stress);
+
+    let recorded = false, classified = false;
+    if (cond === 'baseline') {
+      const p = doc * (stage === 'acting' ? 1.0 : stage === 'defensive' ? 0.45 : stage === 'anxiety' ? 0.15 : 0.04);
+      if (rng() < p) { recorded = true; classified = observerIsTrained && stage !== 'regulated'; }
+    } else if (cond === 'naive') {
+      const p = doc * (stage === 'acting' ? 1.0 : stage === 'defensive' ? 0.45 : stage === 'anxiety' ? 0.18 : 0.05);
+      if (rng() < p) { recorded = true; classified = observerIsTrained && stage !== 'regulated'; }
+      if (stage === 'anxiety' || stage === 'defensive') sim.unclassifiedConcerns++;
+    } else if (cond === 'grid') {
+      const recProbBase = observerIsTrained ? 0.85 : 0.55;
+      const p = (doc * 0.5 + 0.5) * recProbBase * (stage === 'regulated' ? 0.3 : 1.0);
+      if (rng() < p) { recorded = true; classified = stage !== 'regulated'; }
+    }
+
+    // The observation event now carries the recording outcome with it,
+    // so display logic downstream (the close-up panel) can show what
+    // staff actually did after noticing -- recorded and classified,
+    // recorded but unclassified, or noticed with no record at all --
+    // rather than only showing that noticing occurred.
+    sim.pendingObservations.push({ from: observerId, to: 'focal', stage, classified: recorded && classified, recorded });
+
+    if (recorded) {
+      sim.totalLogs++;
+      if (classified) sim.classifiedSignals++;
+      const actorShort = { ct:'Class Teacher', lsp1:'LSP 1 (CPI)', lsp2:'LSP 2', supply:'Supply LSP' }[observerId];
+      const body = classified ? `<strong>${actorShort}</strong> logged <strong>${stageLabel(stage)}</strong>.` : `<strong>${actorShort}</strong> noted general concern.`;
+      sim.record.push({ tick: t, stage, classified, actor: actorShort, body });
+    }
+  }
+
+  if (cond === 'naive') {
+    if (!sim.naiveAlertActive && sim.unclassifiedConcerns >= 8) {
+      sim.naiveAlertActive = true; sim.naiveAlertTick = t;
+      sim.pendingSignals.push({ kind: 'naive-alert' });
+      sim.commentaryLog.push({ tick: t, html: `<span class="stage-tag act">Naive AI:</span> threat alert fires room-wide. Defensive stance jumps to 0.85.` });
+      sim.record.push({ tick: t, stage: 'defensive', classified: false, actor: 'AI', body: `<strong>SYSTEM:</strong> automated threat alert raised.` });
+      sim.totalLogs++;
+    }
+    if (sim.naiveAlertActive && t - sim.naiveAlertTick > 30) {
+      sim.naiveAlertActive = false;
+      sim.unclassifiedConcerns = Math.max(0, sim.unclassifiedConcerns - 4);
+    }
+  }
+
+  if (cond === 'grid') {
+    if (!sim.gridBlAlerted && sim.classifiedSignals >= 4 && sim.stress > 0.22) {
+      sim.gridBlAlerted = true;
+      sim.pendingSignals.push({ kind: 'route-bl' });
+      sim.commentaryLog.push({ tick: t, html: `<span class="grid-tag">GRID:</span> pattern routed to <strong>Behavioural Lead</strong>.` });
+      sim.record.push({ tick: t, stage: 'anxiety', classified: true, actor: 'GRID', body: `<strong>GRID flag → Behavioural Lead:</strong> Anxiety pattern detected.` });
+      sim.totalLogs++;
+    }
+    if (!sim.gridDslAlerted && sim.classifiedSignals >= 8) {
+      sim.gridDslAlerted = true; sim.lowArousalActive = true;
+      sim.pendingSignals.push({ kind: 'route-dsl' });
+      sim.commentaryLog.push({ tick: t, html: `<span class="grid-tag">GRID:</span> cumulative pattern to <strong>DSL</strong>. Low-arousal protocol active.` });
+      sim.record.push({ tick: t, stage: 'anxiety', classified: true, actor: 'GRID', body: `<strong>GRID flag → DSL:</strong> low-arousal protocol activated.` });
+      sim.totalLogs++;
+    }
+  }
+  sim.tick++;
+}
+
+function computeGH(sim) {
+  const expected = (sim.tick + 1) * 0.4;
+  const docScore = Math.min(100, (sim.totalLogs / Math.max(1, expected)) * 100);
+  const clsScore = sim.totalLogs > 0 ? (sim.classifiedSignals / sim.totalLogs) * 100 : 0;
+  let avdScore = sim.crisis ? 30 : 100 - sim.stress * 80;
+  if (avdScore < 0) avdScore = 0;
+  return { doc: Math.round(docScore), cls: Math.round(clsScore), avd: Math.round(avdScore), composite: Math.round(docScore*0.3 + clsScore*0.35 + avdScore*0.35) };
+}
+
+/* ============= RENDERER ============= */
+function renderAgents(svg, sim) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const focal = svg.querySelector('[data-id="focal"]');
+  if (focal) {
+    const halo = focal.querySelector('.halo');
+    const stage = stressToStage(sim.stress);
+    halo.setAttribute('fill', `url(#halo${stage[0].toUpperCase()+stage.slice(1)})`);
+    halo.setAttribute('r', 16 + Math.min(8, sim.stress * 16));
+  }
+  ['ct','lsp1','lsp2','supply'].forEach(id => {
+    const g = svg.querySelector(`[data-id="${id}"]`); if (!g) return;
+    const halo = g.querySelector('.halo');
+    const role = ROLES[id.toUpperCase()];
+    if (sim.condition === 'naive' && sim.naiveAlertActive) { halo.setAttribute('fill', 'url(#haloActing)'); halo.setAttribute('r', 18); }
+    else if (sim.lowArousalActive) { halo.setAttribute('fill', role.cpi ? 'url(#haloTeal)' : 'url(#haloWhite)'); halo.setAttribute('r', 14); }
+    else { halo.setAttribute('fill', role.cpi ? 'url(#haloTeal)' : 'url(#haloWhite)'); halo.setAttribute('r', 13); }
+  });
+  ['bl','dsl'].forEach(id => {
+    const g = svg.querySelector(`[data-id="${id}"]`); if (!g) return;
+    const halo = g.querySelector('.halo');
+    const flagged = id === 'bl' ? sim.gridBlAlerted : sim.gridDslAlerted;
+    halo.setAttribute('fill', flagged ? 'url(#haloTeal)' : 'url(#haloWhite)');
+    halo.setAttribute('r', flagged ? 21 : 17);
+  });
+  ['l2','l3','l4'].forEach(id => {
+    const g = svg.querySelector(`[data-id="${id}"]`); if (!g) return;
+    const halo = g.querySelector('.halo');
+    const ambient = sim.stress * 0.35 + (sim.staffDefensiveStance - 0.2) * 0.3;
+    const stage = ambient >= 0.5 ? 'defensive' : ambient >= 0.3 ? 'anxiety' : 'regulated';
+    halo.setAttribute('fill', `url(#halo${stage[0].toUpperCase()+stage.slice(1)})`);
+    halo.setAttribute('r', 13);
+  });
+
+  const effects = svg.querySelector('#effectsLayer');
+  while (sim.pendingObservations.length) {
+    const obs = sim.pendingObservations.shift();
+    const fromPos = AGENT_POS[obs.from], toPos = AGENT_POS[obs.to];
+    if (!fromPos || !toPos) continue;
+    const beam = document.createElementNS(ns, 'line');
+    beam.setAttribute('x1', fromPos[0]); beam.setAttribute('y1', fromPos[1]);
+    beam.setAttribute('x2', toPos[0]); beam.setAttribute('y2', toPos[1]);
+    beam.setAttribute('stroke', obs.classified ? '#2dd4bf' : '#67e8f9');
+    beam.setAttribute('stroke-width', 1.3); beam.setAttribute('opacity', 0.85);
+    effects.appendChild(beam);
+    setTimeout(() => { beam.style.transition = 'opacity 0.5s ease'; beam.style.opacity = '0'; setTimeout(() => beam.remove(), 600); }, 50);
+
+    // Emphasise the two agents involved: scale up briefly and dim everyone
+    // else, so the single most important moment in the model (a staff
+    // member noticing the focal student) is legible without needing a
+    // separate camera angle or new artwork.
+    const fromGroup = svg.querySelector(`[data-id="${obs.from}"]`);
+    const toGroup = svg.querySelector(`[data-id="${obs.to}"]`);
+    const allAgents = svg.querySelectorAll('.agent-group');
+    if (fromGroup && toGroup) {
+      allAgents.forEach(a => {
+        if (a !== fromGroup && a !== toGroup) {
+          a.style.transition = 'opacity 0.25s ease';
+          a.style.opacity = '0.35';
+        }
+      });
+      [fromGroup, toGroup].forEach(g => {
+        g.style.transition = 'transform 0.25s ease';
+        g.style.transformOrigin = 'center';
+        g.style.transformBox = 'fill-box';
+        g.style.transform = 'scale(1.4)';
+      });
+      setTimeout(() => {
+        allAgents.forEach(a => { a.style.opacity = '1'; });
+        [fromGroup, toGroup].forEach(g => { g.style.transform = 'scale(1)'; });
+      }, 650);
+    }
+
+    // Close-up inset: only render for the primary (non-compare) view,
+    // and only when the observation involves the focal student. The main
+    // view's SVG has id="schoolSvg"; compare-mode panels use different ids
+    // (cmpSvgBaseline etc.), so checking the id avoids needing an extra
+    // parameter on renderAgents itself.
+    if (svg.id === 'schoolSvg' && obs.to === 'focal') showCloseup(obs);
+  }
+
+  while (sim.pendingSignals.length) {
+    const sig = sim.pendingSignals.shift();
+    if (sig.kind === 'route-bl' || sig.kind === 'route-dsl') animateRouting(svg, sig.kind === 'route-bl' ? 'routeToBL' : 'routeToDSL');
+    else if (sig.kind === 'naive-alert') animateNaiveAlert(svg);
+    else if (sig.kind === 'trigger') animateExternalTrigger(svg);
+  }
+}
+
+function animateRouting(svg, pathId) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const layer = svg.querySelector('#signalLayer');
+  const p = svg.querySelector('#' + pathId);
+  if (!p) return;
+  const len = p.getTotalLength();
+  const pulse = document.createElementNS(ns, 'circle');
+  pulse.setAttribute('r', 4); pulse.setAttribute('fill', '#2dd4bf');
+  layer.appendChild(pulse);
+  const trail = document.createElementNS(ns, 'circle');
+  trail.setAttribute('r', 9); trail.setAttribute('fill', '#2dd4bf'); trail.setAttribute('opacity', 0.3);
+  layer.appendChild(trail);
+  const start = performance.now(), dur = 1100;
+  function step(now) {
+    const t = Math.min(1, (now - start) / dur);
+    const ease = t < 0.5 ? 2*t*t : -1 + (4-2*t)*t;
+    const pt = p.getPointAtLength(len * ease);
+    pulse.setAttribute('cx', pt.x); pulse.setAttribute('cy', pt.y);
+    trail.setAttribute('cx', pt.x); trail.setAttribute('cy', pt.y);
+    if (t < 1) requestAnimationFrame(step); else { pulse.remove(); trail.remove(); }
+  }
+  requestAnimationFrame(step);
+}
+
+function animateNaiveAlert(svg) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const effects = svg.querySelector('#effectsLayer');
+  const c = CLASSROOM;
+  const wash = document.createElementNS(ns, 'path');
+  wash.setAttribute('d', `M ${c.btl[0]} ${c.btl[1]} L ${c.btr[0]} ${c.btr[1]} L ${c.fbr[0]} ${c.fbr[1]} L ${c.fbl[0]} ${c.fbl[1]} Z`);
+  wash.setAttribute('fill', '#ef4444'); wash.setAttribute('opacity', 0);
+  effects.appendChild(wash);
+  let op = 0, dir = 1, flashes = 0;
+  const id = setInterval(() => {
+    op += dir * 0.06;
+    if (op >= 0.28) dir = -1;
+    if (op <= 0) { flashes++; dir = 1; if (flashes >= 3) { clearInterval(id); wash.style.transition = 'opacity 0.6s ease'; wash.style.opacity = '0.12'; return; } }
+    wash.setAttribute('opacity', Math.max(0, op));
+  }, 50);
+}
+
+function animateExternalTrigger(svg) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const layer = svg.querySelector('#signalLayer');
+  const pulse = document.createElementNS(ns, 'circle');
+  pulse.setAttribute('cx', 100); pulse.setAttribute('cy', 500);
+  pulse.setAttribute('r', 6); pulse.setAttribute('fill', '#fb8c3b'); pulse.setAttribute('opacity', 0.9);
+  layer.appendChild(pulse);
+  const start = performance.now(), dur = 1200;
+  function step(now) {
+    const t = Math.min(1, (now - start) / dur);
+    pulse.setAttribute('cx', 100 + t * 220);
+    pulse.setAttribute('cy', 500 - t * 150);
+    pulse.setAttribute('r', 6 + t * 14);
+    pulse.setAttribute('opacity', 0.9 - t * 0.9);
+    if (t < 1) requestAnimationFrame(step); else pulse.remove();
+  }
+  requestAnimationFrame(step);
+}
+
+let closeupTimer = null;
+function showCloseup(obs) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.getElementById('closeupSvg');
+  svg.innerHTML = `<defs>
+    <radialGradient id="cuHaloRegulated" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#6ee7a3" stop-opacity="0.55"/><stop offset="50%" stop-color="#6ee7a3" stop-opacity="0.25"/><stop offset="100%" stop-color="#6ee7a3" stop-opacity="0"/></radialGradient>
+    <radialGradient id="cuHaloAnxiety" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fbbf24" stop-opacity="0.6"/><stop offset="50%" stop-color="#fbbf24" stop-opacity="0.3"/><stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/></radialGradient>
+    <radialGradient id="cuHaloDefensive" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fb8c3b" stop-opacity="0.7"/><stop offset="50%" stop-color="#fb8c3b" stop-opacity="0.35"/><stop offset="100%" stop-color="#fb8c3b" stop-opacity="0"/></radialGradient>
+    <radialGradient id="cuHaloActing" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.8"/><stop offset="50%" stop-color="#ef4444" stop-opacity="0.4"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0"/></radialGradient>
+  </defs>`;
+  const stageHaloId = { regulated:'cuHaloRegulated', anxiety:'cuHaloAnxiety', defensive:'cuHaloDefensive', acting:'cuHaloActing' }[obs.stage] || 'cuHaloRegulated';
+
+  // Two simple, dignified figures facing each other: staff member (left,
+  // square body, same visual language as the aerial view) and the focal
+  // student (right, pill body). No facial expression is drawn -- posture
+  // and proximity carry the moment, not an illustrated emotional state.
+  const staffX = 60, studentX = 160, baseY = 70;
+
+  const halo = document.createElementNS(ns, 'circle');
+  halo.setAttribute('cx', studentX); halo.setAttribute('cy', baseY - 4);
+  halo.setAttribute('r', 26); halo.setAttribute('fill', `url(#${stageHaloId})`);
+  svg.appendChild(halo);
+
+  const staffBody = document.createElementNS(ns, 'rect');
+  staffBody.setAttribute('x', staffX - 9); staffBody.setAttribute('y', baseY - 4);
+  staffBody.setAttribute('width', 18); staffBody.setAttribute('height', 26);
+  staffBody.setAttribute('rx', 4); staffBody.setAttribute('fill', '#2dd4bf');
+  staffBody.setAttribute('stroke', 'rgba(0,0,0,0.4)'); staffBody.setAttribute('stroke-width', 0.6);
+  svg.appendChild(staffBody);
+  const staffHead = document.createElementNS(ns, 'circle');
+  staffHead.setAttribute('cx', staffX); staffHead.setAttribute('cy', baseY - 12);
+  staffHead.setAttribute('r', 7); staffHead.setAttribute('fill', 'var(--skin)');
+  staffHead.setAttribute('stroke', 'rgba(0,0,0,0.3)'); staffHead.setAttribute('stroke-width', 0.5);
+  svg.appendChild(staffHead);
+
+  const studentBody = document.createElementNS(ns, 'rect');
+  studentBody.setAttribute('x', studentX - 10); studentBody.setAttribute('y', baseY - 2);
+  studentBody.setAttribute('width', 20); studentBody.setAttribute('height', 24);
+  studentBody.setAttribute('rx', 7); studentBody.setAttribute('fill', '#7aa5cc');
+  studentBody.setAttribute('stroke', 'rgba(0,0,0,0.4)'); studentBody.setAttribute('stroke-width', 0.6);
+  svg.appendChild(studentBody);
+  const studentHead = document.createElementNS(ns, 'circle');
+  studentHead.setAttribute('cx', studentX); studentHead.setAttribute('cy', baseY - 10);
+  studentHead.setAttribute('r', 7.5); studentHead.setAttribute('fill', 'var(--skin)');
+  studentHead.setAttribute('stroke', 'rgba(0,0,0,0.3)'); studentHead.setAttribute('stroke-width', 0.5);
+  svg.appendChild(studentHead);
+
+  // Floor line for grounding, no other scenery -- keep this schematic.
+  const floor = document.createElementNS(ns, 'line');
+  floor.setAttribute('x1', 20); floor.setAttribute('y1', baseY + 28);
+  floor.setAttribute('x2', 200); floor.setAttribute('y2', baseY + 28);
+  floor.setAttribute('stroke', 'rgba(255,255,255,0.08)'); floor.setAttribute('stroke-width', 1);
+  svg.appendChild(floor);
+
+  const actorLabel = { ct:'Class Teacher', lsp1:'LSP 1', lsp2:'LSP 2', supply:'Supply LSP' }[obs.from] || obs.from;
+  const stageLabelText = stageLabel(obs.stage);
+  let actionText;
+  if (obs.classified) {
+    actionText = `logs <strong>${stageLabelText}</strong> in the institutional record.`;
+  } else if (obs.recorded) {
+    actionText = `notes a general concern, unclassified.`;
+  } else {
+    actionText = `does not record this observation.`;
+  }
+  document.getElementById('closeupCaption').innerHTML = `<strong>${actorLabel}</strong> notices ${stageLabelText.toLowerCase()}-stage behaviour and ${actionText}`;
+
+  const panel = document.getElementById('closeupPanel');
+  panel.classList.add('active');
+  if (closeupTimer) clearTimeout(closeupTimer);
+  closeupTimer = setTimeout(() => panel.classList.remove('active'), 1400);
+}
+
+/* ============= STATE & UI ============= */
+const state = {
+  params: { workload: 0.75, cpi: 0.50, doc: 0.25, env: 0.45 },
+  condition: 'grid', playing: false, speed: 1, sim: null, rng: null, intervalId: null,
+  history: [], selectedAgent: null, compareMode: false,
+  compareSims: {}, compareRngs: {}, compareHistory: { baseline:[], grid:[], naive:[] },
+};
+
+function snapshot(sim) {
+  return JSON.parse(JSON.stringify({
+    tick: sim.tick, stress: sim.stress, stressHistory: sim.stressHistory.slice(),
+    staffDefensiveStance: sim.staffDefensiveStance, unclassifiedConcerns: sim.unclassifiedConcerns,
+    classifiedSignals: sim.classifiedSignals, totalLogs: sim.totalLogs, record: sim.record.slice(),
+    crisis: sim.crisis, crisisTick: sim.crisisTick, triggerFired: sim.triggerFired, triggerTick: sim.triggerTick,
+    naiveAlertActive: sim.naiveAlertActive, naiveAlertTick: sim.naiveAlertTick,
+    gridDslAlerted: sim.gridDslAlerted, gridBlAlerted: sim.gridBlAlerted, lowArousalActive: sim.lowArousalActive,
+    commentaryLog: sim.commentaryLog.slice(),
+  }));
+}
+function restoreSnapshot(sim, snap) { Object.assign(sim, snap); sim.pendingSignals = []; sim.pendingObservations = []; }
+
+function freshSim() {
+  state.sim = createSimState(state.condition);
+  state.rng = makeRng(42);
+  state.history = [snapshot(state.sim)];
+  if (state.compareMode) {
+    ['baseline','grid','naive'].forEach(c => {
+      state.compareSims[c] = createSimState(c);
+      state.compareRngs[c] = makeRng(42);
+      state.compareHistory[c] = [snapshot(state.compareSims[c])];
+    });
+  }
+  document.querySelectorAll('#schoolSvg .effects-naive-wash, .compare-svg .effects-naive-wash').forEach(w => w.remove());
+  render(); renderRecord(); hideOutcome();
+}
+
+function advance() {
+  if (!state.sim) freshSim();
+  if (state.sim.tick >= CONFIG.TOTAL_TICKS) { setPlaying(false); showOutcome(); return; }
+  stepSim(state.sim, state.params, state.rng);
+  state.history.push(snapshot(state.sim));
+  if (state.compareMode) {
+    ['baseline','grid','naive'].forEach(c => {
+      if (state.compareSims[c].tick < CONFIG.TOTAL_TICKS) {
+        stepSim(state.compareSims[c], state.params, state.compareRngs[c]);
+        state.compareHistory[c].push(snapshot(state.compareSims[c]));
+      }
+    });
+  }
+  render(); renderCompare();
+  if (state.sim.crisis && state.playing && state.sim.tick === state.sim.crisisTick + 1) {
+    setPlaying(false); setTimeout(showOutcome, 600);
+  }
+}
+
+function stepBack() {
+  if (!state.sim || state.sim.tick === 0) return;
+  if (state.history.length > 1) {
+    state.history.pop();
+    restoreSnapshot(state.sim, state.history[state.history.length - 1]);
+    state.sim.condition = state.condition;
+    if (state.compareMode) {
+      ['baseline','grid','naive'].forEach(c => {
+        if (state.compareHistory[c].length > 1) {
+          state.compareHistory[c].pop();
+          restoreSnapshot(state.compareSims[c], state.compareHistory[c][state.compareHistory[c].length-1]);
+          state.compareSims[c].condition = c;
+        }
+      });
+    }
+    render(); renderCompare();
+  }
+}
+
+function jumpTo(tick) {
+  setPlaying(false); freshSim();
+  state.rng = makeRng(42);
+  if (state.compareMode) ['baseline','grid','naive'].forEach(c => state.compareRngs[c] = makeRng(42));
+  for (let i = 0; i < tick; i++) advance();
+}
+
+function render() {
+  if (!state.sim) return;
+  const sim = state.sim;
+  const tInfo = tickToTime(Math.min(sim.tick, CONFIG.TOTAL_TICKS - 1));
+
+  document.querySelectorAll('#dayStrip button').forEach((b, i) => {
+    b.classList.toggle('active', i === tInfo.day);
+    b.classList.toggle('passed', i < tInfo.day);
+    b.classList.toggle('crisis', sim.crisis && Math.floor(sim.crisisTick / CONFIG.TICKS_PER_DAY) === i);
+  });
+
+  document.getElementById('timeDisplay').textContent = `${tInfo.label} · tick ${sim.tick} / ${CONFIG.TOTAL_TICKS}`;
+  document.getElementById('timeTag').textContent = tInfo.label;
+  document.getElementById('commentaryTime').textContent = tInfo.label;
+  const scrubber = document.getElementById('scrubber');
+  scrubber.value = sim.tick;
+  document.getElementById('scrubberFill').style.width = ((sim.tick / CONFIG.TOTAL_TICKS) * 100) + '%';
+
+  const gh = computeGH(sim);
+  document.getElementById('ghScore').textContent = gh.composite;
+  document.getElementById('ghDocFill').style.width = gh.doc + '%';
+  document.getElementById('ghDocPct').textContent = gh.doc;
+  document.getElementById('ghClsFill').style.width = gh.cls + '%';
+  document.getElementById('ghClsPct').textContent = gh.cls;
+  document.getElementById('ghAvdFill').style.width = gh.avd + '%';
+  document.getElementById('ghAvdPct').textContent = gh.avd;
+
+  const recRate = sim.tick > 0 ? Math.min(1, sim.classifiedSignals / Math.max(1, sim.tick * 0.4)) : 0;
+  document.getElementById('val-rec').textContent = recRate.toFixed(2);
+  document.getElementById('ctl-rec').value = recRate;
+
+  // CDM list highlight
+  const focalStage = stressToStage(sim.stress);
+  document.querySelectorAll('#cdmList .cdm-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.stage === focalStage);
+  });
+
+  const lastComm = sim.commentaryLog.length > 0 ? sim.commentaryLog[sim.commentaryLog.length - 1] : null;
+  const commEl = document.getElementById('commentaryText');
+  if (lastComm) commEl.innerHTML = lastComm.html;
+  else if (sim.tick === 0) commEl.innerHTML = 'Week starting. The classroom is regulated.';
+  else commEl.innerHTML = `Focal Student stress ${sim.stress.toFixed(2)} (${stageLabel(focalStage)}).`;
+
+  renderAgents(document.getElementById('schoolSvg'), sim);
+  renderRecord();
+  if (state.selectedAgent) updateAgentCard();
+}
+
+function renderRecord() {
+  const list = document.getElementById('recordList');
+  if (!state.sim || state.sim.record.length === 0) { list.innerHTML = '<div class="record-empty">No entries yet.</div>'; return; }
+  const items = state.sim.record.slice().reverse().slice(0, 40);
+  list.innerHTML = items.map(r => {
+    const t = tickToTime(r.tick);
+    const cls = r.classified ? 'classified' : '';
+    return `<div class="record-entry stage-${r.stage} ${cls}"><div class="time">${t.label}</div><div class="body">${r.body}</div></div>`;
+  }).join('');
+}
+
+function renderCompare() {
+  if (!state.compareMode) return;
+  ['baseline','grid','naive'].forEach(c => {
+    const sim = state.compareSims[c]; if (!sim) return;
+    const svgId = c === 'baseline' ? 'cmpSvgBaseline' : c === 'grid' ? 'cmpSvgGrid' : 'cmpSvgNaive';
+    const svg = document.getElementById(svgId);
+    renderAgents(svg, sim);
+    const gh = computeGH(sim);
+    const cap = c[0].toUpperCase() + c.slice(1);
+    document.getElementById('cmpStat'+cap+'Health').textContent = gh.composite;
+    document.getElementById('cmpStat'+cap+'Logs').textContent = sim.totalLogs;
+    document.getElementById('cmpStat'+cap+'Stress').textContent = sim.stress.toFixed(2);
+  });
+}
+
+function updateAgentCard() {
+  const id = state.selectedAgent; if (!id || !state.sim) return;
+  const role = ROLES[id.toUpperCase()]; if (!role) return;
+  const card = document.getElementById('agentCard');
+  document.getElementById('acRole').textContent = role.kind === 'lead' ? 'Senior Lead' : role.kind === 'staff' ? (role.cpi ? 'Staff · CPI trained' : 'Staff · No CPI') : (role.focal ? 'Focal Learner · Non-verbal' : 'Learner');
+  document.getElementById('acName').textContent = role.label;
+  const stats = document.getElementById('acStats');
+  const sim = state.sim;
+  if (role.focal) {
+    const stage = stressToStage(sim.stress);
+    stats.innerHTML = `
+      <div class="ac-stat"><div class="label">Current stage</div><div class="val"><span class="ac-badge ${stage}">${stageLabel(stage)}</span></div></div>
+      <div class="ac-stat"><div class="label">Stress index</div><div class="val">${sim.stress.toFixed(3)}</div></div>
+      <div class="ac-stat"><div class="label">CPI-classified logs</div><div class="val">${sim.classifiedSignals}</div></div>
+      <div class="ac-stat"><div class="label">Total logs</div><div class="val">${sim.totalLogs}</div></div>
+    `;
+    document.getElementById('acChart').style.display = 'block';
+    drawTrajectory();
+  } else if (role.kind === 'staff') {
+    const m = { ct:'Class Teacher', lsp1:'LSP 1 (CPI)', lsp2:'LSP 2', supply:'Supply LSP' };
+    const obsCount = sim.record.filter(r => r.actor === m[id]).length;
+    stats.innerHTML = `
+      <div class="ac-stat"><div class="label">CPI training</div><div class="val">${role.cpi ? 'Current' : 'None'}</div></div>
+      <div class="ac-stat"><div class="label">Workload</div><div class="val">${state.params.workload.toFixed(2)}</div></div>
+      <div class="ac-stat"><div class="label">Defensive stance</div><div class="val">${sim.staffDefensiveStance.toFixed(2)}</div></div>
+      <div class="ac-stat"><div class="label">Logs filed</div><div class="val">${obsCount}</div></div>
+    `;
+    document.getElementById('acChart').style.display = 'none';
+  } else if (role.kind === 'lead') {
+    const flagged = id === 'bl' ? sim.gridBlAlerted : sim.gridDslAlerted;
+    const desc = id === 'bl' ? 'Receives GRID flags for trigger isolation.' : 'Receives GRID flags for cumulative harm.';
+    stats.innerHTML = `
+      <div class="ac-stat"><div class="label">Status</div><div class="val">${flagged ? '<span class="ac-badge regulated">Alerted</span>' : '<span style="color:var(--text-dim)">Standby</span>'}</div></div>
+      <div class="ac-stat"><div class="label">Role</div><div class="val" style="font-family:var(--font-body); font-size:10.5px; text-align:right; max-width:140px;">${desc}</div></div>
+    `;
+    document.getElementById('acChart').style.display = 'none';
+  } else {
+    const ambient = sim.stress * 0.35 + (sim.staffDefensiveStance - 0.2) * 0.3;
+    const stage = ambient >= 0.5 ? 'defensive' : ambient >= 0.3 ? 'anxiety' : 'regulated';
+    stats.innerHTML = `
+      <div class="ac-stat"><div class="label">Current stage</div><div class="val"><span class="ac-badge ${stage}">${stageLabel(stage)}</span></div></div>
+      <div class="ac-stat"><div class="label">Notes</div><div class="val" style="font-family:var(--font-body); font-size:10.5px; text-align:right; max-width:140px;">Peer learner.</div></div>
+    `;
+    document.getElementById('acChart').style.display = 'none';
+  }
+  card.classList.add('active');
+}
+
+function drawTrajectory() {
+  const hist = state.sim.stressHistory; if (hist.length < 2) return;
+  const w = 240, h = 56;
+  const points = hist.map((s, i) => [(i / CONFIG.TOTAL_TICKS) * w, h - 6 - s * (h - 12)]);
+  const lineD = 'M ' + points.map(p => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' L ');
+  const fillD = lineD + ` L ${points[points.length-1][0].toFixed(1)} ${h} L 0 ${h} Z`;
+  document.getElementById('acTrajLine').setAttribute('d', lineD);
+  document.getElementById('acTrajFill').setAttribute('d', fillD);
+}
+
+function showOutcome() {
+  const sim = state.sim;
+  const condLabels = { baseline:'Standard Baseline', grid:'GRID Framework', naive:'Naive AI' };
+  let verdict, body;
+  if (sim.crisis) {
+    verdict = `Crisis on ${tickToTime(sim.crisisTick).label}`;
+    if (state.condition === 'naive') body = `Under <strong>${condLabels[state.condition]}</strong>, the system fired a room-wide threat alert when unclassified concerns crossed threshold. Staff defensive stance jumped, the Focal Student absorbed that elevated tension, and the precipitant landed on an already heightened stress state.`;
+    else if (state.condition === 'baseline') body = `Under <strong>${condLabels[state.condition]}</strong>, narrative reporting captured ${sim.classifiedSignals} classified signals. Sub-threshold observations were filtered out. When the precipitant arrived, no antecedent pattern was in the record at sufficient density to support pre-emptive intervention.`;
+    else body = `Under <strong>${condLabels[state.condition]}</strong>, the precipitant exceeded buffered capacity. Try increasing Protected Documentation Time or CPI Coverage and re-run.`;
+  } else {
+    verdict = 'Contained';
+    if (state.condition === 'grid') body = `Under <strong>${condLabels[state.condition]}</strong>, structured CPI input captured ${sim.classifiedSignals} classified observations. The Behavioural Lead and DSL received routed flags before the precipitant landed. The low-arousal protocol dampened the impact.`;
+    else body = `Under <strong>${condLabels[state.condition]}</strong>, no crisis was triggered this run. With different operational variables, the outcome may differ.`;
+  }
+  document.getElementById('outcomeTitle').innerHTML = `Week ended · <span class="verdict ${sim.crisis ? 'crisis' : 'contained'}">${verdict}</span>`;
+  document.getElementById('outcomeBody').innerHTML = body;
+  const gh = computeGH(sim);
+  document.getElementById('outcomeStats').innerHTML = `
+    <div class="outcome-stat"><div class="num ${sim.crisis ? 'red' : 'teal'}">${gh.composite}</div><div class="lbl">Health</div></div>
+    <div class="outcome-stat"><div class="num">${sim.totalLogs}</div><div class="lbl">Logs</div></div>
+    <div class="outcome-stat"><div class="num teal">${sim.classifiedSignals}</div><div class="lbl">Classified</div></div>
+    <div class="outcome-stat"><div class="num ${sim.crisis ? 'red' : ''}">${sim.crisis ? 'Yes' : 'No'}</div><div class="lbl">Crisis</div></div>
+  `;
+  document.getElementById('outcomePanel').classList.add('active');
+}
+function hideOutcome() { document.getElementById('outcomePanel').classList.remove('active'); }
+
+function setPlaying(p) {
+  state.playing = p;
+  document.getElementById('playIcon').style.display = p ? 'none' : 'block';
+  document.getElementById('pauseIcon').style.display = p ? 'block' : 'none';
+  if (state.intervalId) { clearInterval(state.intervalId); state.intervalId = null; }
+  if (p) state.intervalId = setInterval(advance, CONFIG.TICK_INTERVAL_MS / state.speed);
+}
+function setSpeed(s) {
+  state.speed = s;
+  document.querySelectorAll('#speedGroup button').forEach(b => b.classList.toggle('active', parseFloat(b.dataset.speed) === s));
+  if (state.playing) setPlaying(true);
+}
+
+function manualTrigger() {
+  if (!state.sim) freshSim();
+  if (state.sim.triggerFired) return;
+  const labels = {
+    routine: 'Change in routine',
+    staff: 'Unfamiliar staff member',
+    alarm: 'Fire alarm',
+    transport: 'Bus lateness',
+  };
+  const selected = document.getElementById('triggerType').value;
+  const eventLabel = labels[selected] || 'Disruption';
+  state.sim.triggerFired = true; state.sim.triggerTick = state.sim.tick;
+  state.sim.pendingSignals.push({ kind: 'trigger' });
+  let mag = 0.45; if (state.sim.lowArousalActive) mag *= 0.35;
+  state.sim.stress = Math.min(1, state.sim.stress + mag);
+  state.sim.commentaryLog.push({ tick: state.sim.tick, html: `<span class="stage-tag def">${eventLabel}:</span> disruption occurs at ${tickToTime(state.sim.tick).label}.` });
+  if (state.compareMode) {
+    ['baseline','grid','naive'].forEach(c => {
+      const s = state.compareSims[c]; if (!s || s.triggerFired) return;
+      s.triggerFired = true; s.triggerTick = s.tick;
+      s.pendingSignals.push({ kind: 'trigger' });
+      let m = 0.45; if (s.lowArousalActive) m *= 0.35;
+      s.stress = Math.min(1, s.stress + m);
+    });
+  }
+  render(); renderCompare();
+}
+
+function wireAgentClicks(svg, compareCond) {
+  svg.querySelectorAll('.agent-group').forEach(g => {
+    g.addEventListener('click', () => {
+      if (compareCond) return;
+      state.selectedAgent = g.dataset.id;
+      updateAgentCard();
+    });
+  });
+}
+
+function initControls() {
+  const sliders = [{ id:'workload', key:'workload' }, { id:'cpi', key:'cpi' }, { id:'doc', key:'doc' }, { id:'env', key:'env' }];
+  sliders.forEach(({ id, key }) => {
+    const el = document.getElementById('ctl-' + id);
+    const val = document.getElementById('val-' + id);
+    el.addEventListener('input', () => {
+      state.params[key] = parseFloat(el.value);
+      val.textContent = parseFloat(el.value).toFixed(2);
+      setPlaying(false); freshSim();
+    });
+  });
+  document.querySelectorAll('.cond-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      document.querySelectorAll('.cond-option').forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+      state.condition = opt.dataset.cond;
+      setPlaying(false); freshSim();
+    });
+  });
+  document.getElementById('playPauseBtn').addEventListener('click', () => {
+    if (!state.sim) freshSim();
+    if (state.sim.tick >= CONFIG.TOTAL_TICKS) freshSim();
+    setPlaying(!state.playing);
+  });
+  document.getElementById('resetBtn').addEventListener('click', () => { setPlaying(false); freshSim(); });
+  document.getElementById('stepForwardBtn').addEventListener('click', () => { setPlaying(false); advance(); });
+  document.getElementById('stepBackBtn').addEventListener('click', () => { setPlaying(false); stepBack(); });
+  document.getElementById('endBtn').addEventListener('click', () => { setPlaying(false); jumpTo(CONFIG.TICKS_PER_DAY * 3); });
+  document.querySelectorAll('#speedGroup button').forEach(b => b.addEventListener('click', () => setSpeed(parseFloat(b.dataset.speed))));
+  document.querySelectorAll('#dayStrip button').forEach(b => b.addEventListener('click', () => jumpTo(parseInt(b.dataset.day) * CONFIG.TICKS_PER_DAY)));
+  const scrubber = document.getElementById('scrubber');
+  scrubber.addEventListener('input', () => {
+    setPlaying(false);
+    const target = parseInt(scrubber.value);
+    while (state.sim.tick > target && state.history.length > 1) {
+      state.history.pop();
+      restoreSnapshot(state.sim, state.history[state.history.length-1]);
+      state.sim.condition = state.condition;
+      if (state.compareMode) ['baseline','grid','naive'].forEach(c => {
+        if (state.compareHistory[c].length > 1) { state.compareHistory[c].pop(); restoreSnapshot(state.compareSims[c], state.compareHistory[c][state.compareHistory[c].length-1]); state.compareSims[c].condition = c; }
+      });
+    }
+    while (state.sim.tick < target && state.sim.tick < CONFIG.TOTAL_TICKS) {
+      stepSim(state.sim, state.params, state.rng);
+      state.history.push(snapshot(state.sim));
+      if (state.compareMode) ['baseline','grid','naive'].forEach(c => { stepSim(state.compareSims[c], state.params, state.compareRngs[c]); state.compareHistory[c].push(snapshot(state.compareSims[c])); });
+    }
+    render(); renderCompare();
+  });
+  document.getElementById('triggerBtn').addEventListener('click', manualTrigger);
+  document.getElementById('compareToggle').addEventListener('click', () => {
+    state.compareMode = !state.compareMode;
+    document.body.classList.toggle('compare-mode', state.compareMode);
+    document.getElementById('compareToggle').classList.toggle('active', state.compareMode);
+    if (state.compareMode) {
+      ['baseline','grid','naive'].forEach(c => {
+        const id = c === 'baseline' ? 'cmpSvgBaseline' : c === 'grid' ? 'cmpSvgGrid' : 'cmpSvgNaive';
+        buildSchoolSvg(document.getElementById(id));
+        wireAgentClicks(document.getElementById(id), c);
+      });
+      freshSim();
+    } else render();
+  });
+  document.getElementById('aboutBtn').addEventListener('click', () => document.getElementById('aboutModal').classList.add('active'));
+  document.getElementById('legendBtn').addEventListener('click', () => document.getElementById('legendModal').classList.add('active'));
+  document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => b.closest('.modal-overlay').classList.remove('active')));
+  document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); }));
+  document.getElementById('agentCardClose').addEventListener('click', () => { state.selectedAgent = null; document.getElementById('agentCard').classList.remove('active'); });
+  document.getElementById('outcomeClose').addEventListener('click', hideOutcome);
+}
+
+function init() {
+  buildSchoolSvg(document.getElementById('schoolSvg'));
+  wireAgentClicks(document.getElementById('schoolSvg'));
+  initControls();
+  freshSim();
+}
+init();
+</script>
+</body>
+</html>
