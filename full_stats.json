@@ -1,0 +1,80 @@
+{
+  "baseline": {
+    "label": "baseline",
+    "n": 100,
+    "crisis_count": 100,
+    "crisis_rate": 1.0,
+    "governance_health_mean": 36.32503924284395,
+    "governance_health_ci": [
+      34.67173532572503,
+      37.97834315996287
+    ],
+    "total_logs_mean": 2.82,
+    "total_logs_ci": [
+      2.559588899986769,
+      3.080411100013231
+    ],
+    "classified_signals_mean": 1.94,
+    "classified_signals_ci": [
+      1.7375337354450666,
+      2.1424662645549333
+    ],
+    "final_stress_mean": 0.382962487417166,
+    "final_stress_ci": [
+      0.38011300206228493,
+      0.38581197277204704
+    ]
+  },
+  "naive": {
+    "label": "naive",
+    "n": 100,
+    "crisis_count": 100,
+    "crisis_rate": 1.0,
+    "governance_health_mean": 28.208945060018465,
+    "governance_health_ci": [
+      27.413391734065378,
+      29.00449838597155
+    ],
+    "total_logs_mean": 2.55,
+    "total_logs_ci": [
+      2.4212027668281366,
+      2.678797233171863
+    ],
+    "classified_signals_mean": 1.25,
+    "classified_signals_ci": [
+      1.152,
+      1.348
+    ],
+    "final_stress_mean": 0.38255143511569856,
+    "final_stress_ci": [
+      0.37985379078315473,
+      0.3852490794482424
+    ]
+  },
+  "grid": {
+    "label": "grid",
+    "n": 100,
+    "crisis_count": 0,
+    "crisis_rate": 0.0,
+    "governance_health_mean": 53.67801911048368,
+    "governance_health_ci": [
+      53.13306135454242,
+      54.22297686642494
+    ],
+    "total_logs_mean": 15.57,
+    "total_logs_ci": [
+      15.070680623248006,
+      16.069319376751995
+    ],
+    "classified_signals_mean": 8.52,
+    "classified_signals_ci": [
+      8.39088681028812,
+      8.64911318971188
+    ],
+    "final_stress_mean": 0.1488413614800214,
+    "final_stress_ci": [
+      0.14575330643371348,
+      0.1519294165263293
+    ]
+  }
+}
