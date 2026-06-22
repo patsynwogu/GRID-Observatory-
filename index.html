@@ -168,6 +168,19 @@ body.compare-mode .viewport-compare { display: grid; }
 .gh-bar .fill { height: 100%; background: var(--teal); border-radius: 2.5px; width: 0%; transition: width 0.4s ease; }
 .gh-bar .pct { font-family: var(--font-mono); font-size: 10px; color: var(--text-primary); text-align: right; }
 .record-block { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.mc-toggle { width: 100%; padding: 8px; margin-top: 10px; background: var(--bg-elev); border: 1px solid var(--border-strong); border-radius: 5px; color: var(--text-secondary); font-size: 10.5px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; font-family: var(--font-mono); transition: all 0.15s ease; }
+.mc-toggle:hover { border-color: var(--teal); color: var(--teal); }
+.mc-panel { display: none; margin-top: 10px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 7px; padding: 10px 12px; }
+.mc-panel.active { display: block; }
+.mc-panel-title { font-size: 10px; color: var(--text-dim); letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: 8px; }
+.mc-row { display: grid; grid-template-columns: 56px 1fr; gap: 8px; align-items: baseline; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.mc-row:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.mc-row .cond-name { font-size: 10.5px; font-weight: 600; color: var(--text-primary); }
+.mc-row .cond-stats { font-family: var(--font-mono); font-size: 9.5px; color: var(--text-secondary); line-height: 1.5; }
+.mc-row .cond-stats .crisis-rate { color: var(--stage-acting); font-weight: 600; }
+.mc-row .cond-stats .crisis-rate.zero { color: var(--stage-regulated); }
+.mc-note { font-size: 9.5px; color: var(--text-faint); margin-top: 8px; line-height: 1.4; font-style: italic; }
+.mc-error { font-size: 10.5px; color: var(--text-dim); line-height: 1.5; }
 .record-list { flex: 1; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 7px; padding: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; min-height: 100px; }
 .record-empty { text-align: center; color: var(--text-faint); padding: 20px 14px; font-style: italic; font-size: 11px; }
 .record-entry { padding: 6px 8px; background: var(--bg-panel); border-left: 2px solid var(--text-faint); border-radius: 3px; animation: slide-in 0.22s ease-out; }
@@ -430,6 +443,8 @@ body.compare-mode .viewport-compare { display: grid; }
         <div class="record-list" id="recordList">
           <div class="record-empty">No entries yet. Press play to begin the week.</div>
         </div>
+        <button class="mc-toggle" id="mcToggle">Show 100-replication results</button>
+        <div class="mc-panel" id="mcPanel"></div>
       </div>
     </aside>
 
@@ -1516,11 +1531,66 @@ function initControls() {
     } else render();
   });
   document.getElementById('aboutBtn').addEventListener('click', () => document.getElementById('aboutModal').classList.add('active'));
+  document.getElementById('mcToggle').addEventListener('click', toggleMcPanel);
   document.getElementById('legendBtn').addEventListener('click', () => document.getElementById('legendModal').classList.add('active'));
   document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => b.closest('.modal-overlay').classList.remove('active')));
   document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); }));
   document.getElementById('agentCardClose').addEventListener('click', () => { state.selectedAgent = null; document.getElementById('agentCard').classList.remove('active'); });
   document.getElementById('outcomeClose').addEventListener('click', hideOutcome);
+}
+
+let mcStatsCache = null;
+let mcPanelOpen = false;
+
+function toggleMcPanel() {
+  mcPanelOpen = !mcPanelOpen;
+  const panel = document.getElementById('mcPanel');
+  const btn = document.getElementById('mcToggle');
+  if (!mcPanelOpen) {
+    panel.classList.remove('active');
+    btn.textContent = 'Show 100-replication results';
+    return;
+  }
+  btn.textContent = 'Hide 100-replication results';
+  panel.classList.add('active');
+  if (mcStatsCache) { renderMcPanel(mcStatsCache); return; }
+  panel.innerHTML = '<div class="mc-error">Loading…</div>';
+  // This reads the real output of grid_abm.py (100 Monte Carlo
+  // replications per condition), generated separately and committed
+  // alongside this file. It is not recomputed here -- this dashboard
+  // displays the statistics, it does not produce them.
+  fetch('full_stats.json')
+    .then(res => { if (!res.ok) throw new Error('not found'); return res.json(); })
+    .then(data => { mcStatsCache = data; renderMcPanel(data); })
+    .catch(() => {
+      panel.innerHTML = '<div class="mc-error">Could not load full_stats.json. This file must be served over HTTP (e.g. the live Netlify site) rather than opened directly from disk, and full_stats.json must sit alongside index.html in the same deployed folder.</div>';
+    });
+}
+
+function renderMcPanel(data) {
+  const panel = document.getElementById('mcPanel');
+  const order = ['baseline', 'naive', 'grid'];
+  const labels = { baseline: 'Baseline', naive: 'Naive AI', grid: 'GRID' };
+  panel.innerHTML = '<div class="mc-panel-title">100 Monte Carlo replications</div>' +
+    order.map(cond => {
+      const s = data[cond];
+      if (!s) return '';
+      const crisisPct = Math.round(s.crisis_rate * 100);
+      const crisisCls = crisisPct === 0 ? 'zero' : '';
+      const gh = s.governance_health_mean.toFixed(1);
+      const ghLo = s.governance_health_ci[0].toFixed(1);
+      const ghHi = s.governance_health_ci[1].toFixed(1);
+      const logs = s.total_logs_mean.toFixed(1);
+      return `<div class="mc-row">
+        <div class="cond-name">${labels[cond]}</div>
+        <div class="cond-stats">
+          Crisis: <span class="crisis-rate ${crisisCls}">${s.crisis_count}/${s.n} (${crisisPct}%)</span><br>
+          Gov. Health: ${gh} (${ghLo}–${ghHi})<br>
+          Mean logs/week: ${logs}
+        </div>
+      </div>`;
+    }).join('') +
+    '<div class="mc-note">Source: grid_abm.py, n=100 per condition. This panel displays pre-computed results; it does not run replications in the browser.</div>';
 }
 
 function init() {
