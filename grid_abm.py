@@ -13,6 +13,7 @@ the draft text is wrong and must be corrected, not the other way round.
 
 import json
 import math
+import os
 import statistics
 from dataclasses import dataclass, field
 
@@ -295,10 +296,12 @@ if __name__ == "__main__":
         stress = f"{s['final_stress_mean']:.3f} ({s['final_stress_ci'][0]:.3f}-{s['final_stress_ci'][1]:.3f})"
         print(f"{cond:<10} {s['crisis_count']}/{N} ({s['crisis_rate']*100:.0f}%)   {gh:<28} {logs:<24} {cls:<24} {stress}")
 
-    with open("/home/claude/grid_sim/full_stats.json", "w") as f:
+    output_dir = os.path.dirname(os.path.abspath(__file__))
+
+    with open(os.path.join(output_dir, "full_stats.json"), "w") as f:
         json.dump(summaries, f, indent=2, default=str)
 
-    with open("/home/claude/grid_sim/grid_summary.csv", "w") as f:
+    with open(os.path.join(output_dir, "grid_summary.csv"), "w") as f:
         f.write("condition,replication,crisis,crisis_tick,final_stress,total_logs,classified_signals,governance_health\n")
         for cond in conditions:
             for i, r in enumerate(all_results[cond]):
