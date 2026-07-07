@@ -26,6 +26,8 @@ python3 grid_abm.py
 
 Requires Python 3.8+, no external dependencies. Running the script executes 100 Monte Carlo replications per condition and regenerates `full_stats.json` and `grid_summary.csv`.
 
+ grid_sensitivity.py sweeps each operational variable while holding the others at default, for all three conditions, and reproduces the CPI-coverage result in Section 3.2 (GRID: 29/100 crises at coverage 0.1, 4/100 at 0.3, 0/100 at 0.5 and above)
+
 ## Relationship to the published paper
 
 Statistical results reported in the paper's Results section are generated exclusively by `grid_abm.py`. The interactive dashboard (`index.html`) implements the same step logic for live demonstration, and separately displays — but does not compute — the pre-generated results from `full_stats.json` via its "Show 100-replication results" panel. The dashboard is a viewer of those results, not their source. All simulation inputs and outputs are synthetic; no real student, staff, or school data is used or stored in any artefact in this repository.
