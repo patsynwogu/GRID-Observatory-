@@ -826,7 +826,7 @@ function createSimState(condition) {
   return {
     condition, tick: 0, stress: 0.05, stressHistory: [], staffDefensiveStance: 0.20,
     unclassifiedConcerns: 0, classifiedSignals: 0, totalLogs: 0, record: [],
-    crisis: false, crisisTick: null, triggerFired: false, triggerTick: null,
+    crisis: false, crisisTick: null, triggerFired: false, triggerTick: null, manualTriggerFired: false,
     naiveAlertActive: false, naiveAlertTick: null,
     gridDslAlerted: false, gridBlAlerted: false, lowArousalActive: false,
     pendingSignals: [], pendingObservations: [], commentaryLog: [],
@@ -1442,7 +1442,7 @@ function setSpeed(s) {
 
 function manualTrigger() {
   if (!state.sim) freshSim();
-  if (state.sim.triggerFired) return;
+  if (state.sim.manualTriggerFired) return;
   const labels = {
     routine: 'Change in routine',
     staff: 'Unfamiliar staff member',
@@ -1451,15 +1451,15 @@ function manualTrigger() {
   };
   const selected = document.getElementById('triggerType').value;
   const eventLabel = labels[selected] || 'Disruption';
-  state.sim.triggerFired = true; state.sim.triggerTick = state.sim.tick;
+  state.sim.manualTriggerFired = true;
   state.sim.pendingSignals.push({ kind: 'trigger' });
   let mag = 0.45; if (state.sim.lowArousalActive) mag *= 0.35;
   state.sim.stress = Math.min(1, state.sim.stress + mag);
   state.sim.commentaryLog.push({ tick: state.sim.tick, html: `<span class="stage-tag def">${eventLabel}:</span> disruption occurs at ${tickToTime(state.sim.tick).label}.` });
   if (state.compareMode) {
     ['baseline','grid','naive'].forEach(c => {
-      const s = state.compareSims[c]; if (!s || s.triggerFired) return;
-      s.triggerFired = true; s.triggerTick = s.tick;
+      const s = state.compareSims[c]; if (!s || s.manualTriggerFired) return;
+      s.manualTriggerFired = true;
       s.pendingSignals.push({ kind: 'trigger' });
       let m = 0.45; if (s.lowArousalActive) m *= 0.35;
       s.stress = Math.min(1, s.stress + m);
