@@ -502,7 +502,10 @@ body.compare-mode .viewport-compare { display: grid; }
 
 const CONFIG = {
   TOTAL_TICKS: 360, TICKS_PER_DAY: 72, DAYS: ['Mon','Tue','Wed','Thu','Fri'],
-  START_HOUR: 9, MINUTES_PER_TICK: 5, EXTERNAL_TRIGGER_TICK: 264,
+  START_HOUR: 9, MINUTES_PER_TICK: 5,
+  RECURRING_TRIGGER_TICKS: [20, 92, 164, 236, 308],
+  DAILY_TRIGGER_MAGNITUDE: 0.12, FRIDAY_UNRESOLVED: 0.45, FRIDAY_RESOLVED: 0.0,
+  RECOGNITION_THRESHOLD: 8,
   DECAY: 0.85, KAPPA: 0.18, CRISIS_THRESHOLD: 0.70, TICK_INTERVAL_MS: 110,
 };
 
@@ -855,10 +858,18 @@ function stepSim(sim, params, rng) {
 
   let envEvent = rng() < env * 0.04 ? (rng() * 0.05 + 0.02) : 0;
   let triggerMag = 0;
-  if (!sim.triggerFired && t === CONFIG.EXTERNAL_TRIGGER_TICK) {
-    sim.triggerFired = true; sim.triggerTick = t; triggerMag = 0.45;
+  if (CONFIG.RECURRING_TRIGGER_TICKS.includes(t)) {
+    const isFriday = t === CONFIG.RECURRING_TRIGGER_TICKS[CONFIG.RECURRING_TRIGGER_TICKS.length - 1];
+    if (!isFriday) {
+      triggerMag = CONFIG.DAILY_TRIGGER_MAGNITUDE;
+      sim.commentaryLog.push({ tick: t, html: `<span class="stage-tag def">Morning event:</span> the antecedent recurs. Absorbed without escalation.` });
+    } else {
+      const recognised = sim.classifiedSignals >= CONFIG.RECOGNITION_THRESHOLD;
+      triggerMag = (cond === 'grid' && recognised) ? CONFIG.FRIDAY_RESOLVED : CONFIG.FRIDAY_UNRESOLVED;
+      sim.commentaryLog.push({ tick: t, html: `<span class="stage-tag def">Friday event:</span> ${recognised && cond === 'grid' ? 'antecedent identified and addressed. Neutralised.' : 'no pattern in the record. Amplified.'}` });
+    }
+    sim.triggerFired = true; sim.triggerTick = t;
     sim.pendingSignals.push({ kind: 'trigger' });
-    sim.commentaryLog.push({ tick: t, html: `<span class="stage-tag def">External event:</span> precipitant arrives at the building.` });
   }
   if (sim.lowArousalActive) triggerMag *= 0.35;
 
