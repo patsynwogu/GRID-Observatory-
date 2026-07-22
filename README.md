@@ -1,6 +1,8 @@
 # GRID Observatory
 
-Computational governance framework for AI deployment in specialist SEND (Special Educational Needs and Disabilities) schools, stress-tested via agent-based simulation.
+# The Mathematics of Safeguarding: A Computational Governance Model for Non-Verbal SEND Learners
+
+A computational governance model of safeguarding underreporting in specialist SEND (Special Educational Needs and Disabilities) settings, stress-tested via agent-based simulation.
 
 GRID (Governance Risk and Infrastructure Diagnostics) addresses a structural safeguarding gap: non-verbal autistic learners cannot self-report distress, so their safety depends entirely on whether trained staff observe, record, and escalate behavioural signals before a crisis occurs. This repository contains two faithful implementations of the same underlying model, built for two different purposes, together with the scripts that produce the reported statistics and figures.
 
